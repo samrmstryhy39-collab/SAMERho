@@ -35,6 +35,8 @@ text_visibility = {
     "input_title_placeholder": True,
     "label_price": True,
     "input_price_placeholder": True,
+    "label_quantity": True,
+    "input_quantity_placeholder": True,
     "label_contact_method": True,
     "contact_type_instagram": True,
     "contact_type_phone": True,
@@ -61,6 +63,8 @@ site_config = {
         "input_title_placeholder": "أدخل اسم المنتج",
         "label_price": "السعر",
         "input_price_placeholder": "أدخل السعر",
+        "label_quantity": "الكمية المتوفرة",
+        "input_quantity_placeholder": "أدخل الكمية (مثال: 1)",
         "label_contact_method": "طريقة التواصل",
         "contact_type_instagram": "حساب Instagram",
         "contact_type_phone": "الرقم الخاص بي",
@@ -91,6 +95,7 @@ site_config = {
         "submit_btn": "#25d366"            
     }
 }
+
 html_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -121,7 +126,7 @@ html_template = """
         .product-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: {{ config.colors.product_title }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .product-price { color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 10px; font-size: 13px; }
         .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; }
-        .sold-btn-disabled { background: #555 !important; cursor: not-allowed; }
+        .sold-btn-disabled { background: #555 !important; }
         .toggle-form-btn { background-color: {{ config.colors.toggle_btn }}; color: white; border: 2px solid #ffffff; padding: 12px 25px; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 25px; }
         .container { background: #111111; border: 1px solid #222; border-radius: 12px; padding: 20px; width: 100%; max-width: 600px; margin-bottom: 30px; display: none; }
         .container.active { display: block; }
@@ -161,10 +166,11 @@ html_template = """
                     <div class="product-images">{% for img in p.images %}<img src="{{ img }}" alt="صورة">{% endfor %}</div>
                     <div class="product-info">
                         <div class="product-title" title="{{ p.title }}">{{ p.title }}</div>
-                        <div class="product-price">{{ p.price }}</div>
+                        <div class="product-price">{{ p.price }} {% if p.quantity %} | الكمية: {{ p.quantity }}{% endif %}</div>
                         {% if vis.view_details %}
-                            {% if p.is_sold %}<span class="contact-btn sold-btn-disabled">تم البيع</span>
-                            {% else %}<a href="/product/{{ p.id }}" class="contact-btn">{{ config.texts.view_details }}</a>{% endif %}
+                            <a href="/product/{{ p.id }}" class="contact-btn {% if p.is_sold %}sold-btn-disabled{% endif %}">
+                                {% if p.is_sold %}تم البيع (عرض الصور){% else %}{{ config.texts.view_details }}{% endif %}
+                            </a>
                         {% endif %}
                     </div>
                 </div>
@@ -187,6 +193,10 @@ html_template = """
                 <input type="text" name="price" {% if vis.input_price_placeholder %}placeholder="{{ config.texts.input_price_placeholder }}"{% endif %}>
             </div>
             {% endif %}
+            <div class="input-group">
+                <label style="color: {{ config.colors.label_title }};">{{ config.texts.label_quantity }}</label>
+                <input type="text" name="quantity" placeholder="{{ config.texts.input_quantity_placeholder }}" value="1">
+            </div>
             {% if vis.label_contact_method or vis.contact_type_instagram or vis.contact_type_phone or vis.input_contact_placeholder %}
             <div class="input-group">
                 {% if vis.label_contact_method %}<label style="color: {{ config.colors.label_title }};">{{ config.texts.label_contact_method }}</label>{% endif %}
@@ -242,6 +252,7 @@ html_template = """
 </body>
 </html>
 """
+
 product_detail_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -262,7 +273,7 @@ product_detail_template = """
 <body>
     <div class="detail-container">
         <h1 class="product-title">{{ product.title }}</h1>
-        <div class="product-price">{{ product.price }}</div>
+        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
         <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
         {% if controls.enable_contact_btn and not product.is_sold %}
             {% if product.contact_type == 'instagram' %}
@@ -288,6 +299,7 @@ copyright_template = """
 <body><div class="box"><h1>حقوق النشر والشروط</h1><p>{{ text }}</p><a href="/" class="back">← العودة إلى المتجر الرئيسي</a></div></body>
 </html>
 """
+
 admin_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -348,6 +360,10 @@ admin_template = """
                         {% if vis.label_price %}<label>{{ config.texts.label_price }}</label>{% endif %}
                         <input type="text" name="price" {% if vis.input_price_placeholder %}placeholder="{{ config.texts.input_price_placeholder }}"{% endif %}>
                     {% endif %}
+                    <div class="input-group">
+                        <label>{{ config.texts.label_quantity }}</label>
+                        <input type="text" name="quantity" placeholder="{{ config.texts.input_quantity_placeholder }}" value="1">
+                    </div>
                     {% if vis.label_contact_method or vis.contact_type_instagram or vis.contact_type_phone or vis.input_contact_placeholder %}
                         {% if vis.label_contact_method %}<label>{{ config.texts.label_contact_method }}</label>{% endif %}
                         <select name="contact_type">
@@ -499,12 +515,13 @@ def add_product():
     if site_controls['block_posting']: return redirect(url_for('index'))
     title = request.form.get('title')
     price = request.form.get('price', '')
+    quantity = request.form.get('quantity', '1').strip()
     contact_type = request.form.get('contact_type', 'phone')
     contact_value = request.form.get('contact_value', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     images_list = [img for img in images_list if img]
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
         product_id_counter += 1
     return redirect(url_for('index'))
 
@@ -513,12 +530,13 @@ def admin_add_product():
     global product_id_counter
     title = request.form.get('title')
     price = request.form.get('price', '')
+    quantity = request.form.get('quantity', '1').strip()
     contact_type = request.form.get('contact_type', 'phone')
     contact_value = request.form.get('contact_value', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     images_list = [img for img in images_list if img]
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
         product_id_counter += 1
     return redirect(url_for('admin'))
 
