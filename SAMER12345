@@ -14,8 +14,8 @@ products = []
 auctions = []
 notes = []
 reviews = [
-    {"id": 1, "name": "محمد أحمد", "comment": "متجر فخم جداً والقطع أصلية وتوصيل سريع، شكراً لكم!"},
-    {"id": 2, "name": "عمر خالد", "comment": "تجربة شراء ممتازة والتعامل راقي جداً."}
+    {"id": 1, "name": "محمد أحمد", "rating": 5, "comment": "متجر فخم جداً والقطع أصلية وتوصيل سريع، شكراً لكم!"},
+    {"id": 2, "name": "عمر خالد", "rating": 5, "comment": "تجربة شراء ممتازة والتعامل راقي جداً."}
 ]
 product_id_counter = 1
 auction_id_counter = 1
@@ -171,7 +171,7 @@ default_html_template = """
         .show { display: block; }
         .cart-badge { background: {{ config.colors.cart_btn }}; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; }
 
-        .toast-msg { position: fixed; bottom: 30px; background: #25d366; color: #000; padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; gap: 8px; animation: fadeInOut 3s ease; }
+        .toast-msg { position: fixed; bottom: 30px; background: #25d366; color: #000; padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; gap: 8px; }
 
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
@@ -366,13 +366,20 @@ default_html_template = """
             fetch('/add-to-cart-ajax/' + productId, { method: 'POST' })
             .then(response => response.json())
             .then(data => {
+                const toast = document.getElementById('toast');
                 if(data.success) {
-                    const toast = document.getElementById('toast');
-                    toast.style.display = 'flex';
-                    setTimeout(() => {
-                        toast.style.display = 'none';
-                    }, 3000);
+                    toast.innerText = "✅ تم الإضافة إلى السلة";
+                    toast.style.background = "#25d366";
+                    toast.style.color = "#000";
+                } else {
+                    toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة";
+                    toast.style.background = "#dc2626";
+                    toast.style.color = "#fff";
                 }
+                toast.style.display = 'flex';
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 3000);
             });
         }
 
@@ -542,11 +549,21 @@ reviews_page_template = """
         body { background: #000; color: #fff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
         .box { background: #111; border: 1px solid #222; padding: 25px; border-radius: 12px; width: 100%; max-width: 650px; margin-top: 20px; box-sizing: border-box; }
         h1 { color: #ff5252; text-align: center; font-size: 20px; margin-bottom: 20px; }
-        .review-card { background: #000; padding: 12px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; }
-        .review-card p { color: #fff; font-size: 13px; margin: 0 0 5px 0; }
+        .review-card { background: #000; padding: 15px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+        .review-header { display: flex; justify-content: space-between; align-items: center; }
+        .review-stars { color: #fbbf24; font-size: 14px; letter-spacing: 2px; }
+        .review-card p { color: #fff; font-size: 13px; margin: 0; line-height: 1.5; }
         .review-card span { color: #25d366; font-size: 11px; font-weight: bold; }
         .add-review-form { margin-top: 25px; border-top: 1px solid #222; padding-top: 20px; }
         input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none; }
+        
+        .rating-select { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 5px; margin-bottom: 12px; }
+        .rating-select input { display: none; }
+        .rating-select label { font-size: 24px; color: #444; cursor: pointer; transition: color 0.2s; }
+        .rating-select input:checked ~ label,
+        .rating-select label:hover,
+        .rating-select label:hover ~ label { color: #fbbf24; }
+
         button { width: 100%; padding: 12px; border-radius: 8px; background: #25d366; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
         .back { display: block; text-align: center; margin-top: 25px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 14px; }
     </style>
@@ -557,8 +574,13 @@ reviews_page_template = """
         {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 15px; font-size: 13px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
         {% for r in reviews %}
             <div class="review-card">
+                <div class="review-header">
+                    <span>- {{ r.name }}</span>
+                    <div class="review-stars">
+                        {% for i in range(r.rating) %}⭐{% endfor %}
+                    </div>
+                </div>
                 <p>"{{ r.comment }}"</p>
-                <span>- {{ r.name }}</span>
             </div>
         {% endfor %}
         
@@ -566,6 +588,16 @@ reviews_page_template = """
             <h3 style="color: #fff; font-size: 15px; margin-bottom: 12px; text-align: right;">أضف رأيك وتجربتك معنا:</h3>
             <form action="/add-review" method="POST">
                 <input type="text" name="reviewer_name" placeholder="اسمك الكريم" required>
+                
+                <label style="font-size: 12px; color: #ccc; margin-bottom: 5px; display: block; text-align: right;">التقييم بالنجوم:</label>
+                <div class="rating-select">
+                    <input type="radio" id="star5" name="rating" value="5" checked><label for="star5">★</label>
+                    <input type="radio" id="star4" name="rating" value="4"><label for="star4">★</label>
+                    <input type="radio" id="star3" name="rating" value="3"><label for="star3">★</label>
+                    <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
+                    <input type="radio" id="star1" name="rating" value="1"><label for="star1">★</label>
+                </div>
+
                 <textarea name="reviewer_comment" rows="3" placeholder="اكتب رأيك هنا..." required></textarea>
                 <button type="submit">نشر الرأي</button>
             </form>
@@ -594,7 +626,6 @@ product_detail_template = """
         .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
         .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
         .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .add-cart-detail { display: block; text-align: center; background: {{ config.colors.cart_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 15px; border: none; width: 100%; cursor: pointer; }
         .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
         .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; margin-bottom: 10px; }
     </style>
@@ -635,7 +666,7 @@ product_detail_template = """
         {% endif %}
 
         {% if controls.enable_cart and not product.is_sold %}
-            <form action="/add-to-cart/{{ product.id }}" method="POST"><button type="submit" class="add-cart-detail">أضف إلى السلة 🛒</button></form>
+            <form action="/add-to-cart/{{ product.id }}" method="POST"><button type="submit" class="buy-toggle-btn" style="background: {{ config.colors.cart_btn }}; margin-bottom: 15px;">أضف إلى السلة 🛒</button></form>
         {% elif product.is_sold %}
             <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
         {% endif %}
@@ -787,7 +818,7 @@ admin_template = """
                 {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 10px; font-size: 12px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
                 {% for r in reviews %}
                     <div class="product-row">
-                        <span><b>{{ r.name }}:</b> {{ r.comment }}</span>
+                        <span><b>{{ r.name }}</b> (⭐ {{ r.rating }}): {{ r.comment }}</span>
                         <form action="/delete-review/{{ r.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
                     </div>
                 {% endfor %}
@@ -962,6 +993,10 @@ def add_to_cart_ajax(p_id):
     product = next((p for p in products if p['id'] == p_id), None)
     if product and not product.get('is_sold', False):
         cart = get_cart()
+        already_exists = any(item['id'] == p_id for item in cart)
+        if already_exists:
+            return jsonify({"success": False, "msg": "مضاف مسبقاً"})
+        
         import uuid
         cart_item = {
             "cart_id": str(uuid.uuid4()),
@@ -1134,8 +1169,13 @@ def add_review():
     global review_id_counter, reviews
     name = request.form.get('reviewer_name', '').strip()
     comment = request.form.get('reviewer_comment', '').strip()
+    try:
+        rating = int(request.form.get('rating', 5))
+    except ValueError:
+        rating = 5
+
     if name and comment:
-        reviews.insert(0, {"id": review_id_counter, "name": name, "comment": comment})
+        reviews.insert(0, {"id": review_id_counter, "name": name, "rating": rating, "comment": comment})
         review_id_counter += 1
     return redirect(url_for('reviews_page'))
 
