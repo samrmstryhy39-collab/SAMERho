@@ -14,7 +14,6 @@ def init_db():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # جدول المنتجات والمزادات
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS products (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +32,6 @@ def init_db():
         )
     ''')
     
-    # جدول الإعدادات العامة والمتغيرات
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
@@ -50,12 +48,10 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-# تهيئة الإعدادات الافتراضية في قاعدة البيانات إذا كانت فارغة
 def load_settings():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # التحقق من وجود الإعدادات
     cursor.execute("SELECT * FROM settings WHERE key='site_config'")
     if not cursor.fetchone():
         import json
@@ -765,4 +761,9 @@ def update_logo():
     controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
     logo_file = request.files.get('logo_file')
     if logo_file and logo_file.filename != '':
-        compressed_logo = process_and_compress_ima
+        compressed_logo = process_and_compress_image(logo_file)
+        if compressed_logo: controls['logo_image'] = compressed_logo
+    save_setting('controls', controls)
+    return redirect(url_for('admin'))
+
+@
