@@ -42,6 +42,7 @@ site_controls = {
 text_visibility = {
     "heading_products": True,
     "no_products": True,
+    "heading_auctions": True,
     "toggle_btn_open": True,
     "toggle_btn_close": True,
     "form_main_title": True,
@@ -72,6 +73,7 @@ site_config = {
     "texts": {
         "heading_products": "المنتجات والمعروضات",
         "no_products": "لا توجد منتجات معروضة حالياً.",
+        "heading_auctions": "🔥 المزادات الحالية المشتعلة",
         "toggle_btn_open": "➕ إضافة قطعة جديدة",
         "toggle_btn_close": "✖ إغلاق القائمة",
         "form_main_title": "أضف قطعة جديدة للمتجر",
@@ -102,6 +104,7 @@ site_config = {
         "logo_border": "#ffffff",          
         "products_heading": "#ffffff",     
         "no_products": "#777777",          
+        "auctions_heading": "#fbbf24",     
         "product_bg": "#111111",           
         "product_title": "#ffffff",        
         "product_price": "#25d366",        
@@ -123,6 +126,7 @@ color_names_ar = {
     "subtitle": "لون وصف/شعار الموقع الفرعي",
     "products_heading": "لون عنوان قسم المنتجات المعروضة",
     "no_products": "لون جملة عدم وجود منتجات",
+    "auctions_heading": "لون عنوان قسم المزادات",
     "product_bg": "لون خلفية بطاقة/مربع المنتج",
     "product_title": "لون عنوان المنتج",
     "product_price": "لون سعر المنتج والكمية",
@@ -168,6 +172,8 @@ default_html_template = """
         .auction-header { display: flex; justify-content: space-between; align-items: center; }
         .auction-title { font-size: 16px; font-weight: bold; color: #fbbf24; }
         .auction-timer { background: rgba(217, 119, 6, 0.2); border: 1px solid #d97706; color: #fbbf24; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+        .auction-images { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; background: #000; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 8px; margin-bottom: 5px; }
+        .auction-images img { width: 100%; height: 160px; object-fit: cover; border-radius: 6px; flex: 0 0 100%; }
         .auction-details { font-size: 13px; color: #ccc; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
         .bid-btn { background: #d97706; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; text-align: center; text-decoration: none; display: block; }
 
@@ -238,13 +244,20 @@ default_html_template = """
 
     {% if controls.enable_auctions and auctions|length > 0 %}
     <div class="auctions-section">
-        <h2 style="color: #fbbf24; margin-bottom: 15px; text-align: right; font-size: 18px;">🔥 المزادات الحالية المشتعلة</h2>
+        {% if vis.heading_auctions %}<h2 style="color: {{ config.colors.auctions_heading }}; margin-bottom: 15px; text-align: right; font-size: 18px;">{{ config.texts.heading_auctions }}</h2>{% endif %}
         {% for a in auctions %}
         <div class="auction-card">
             <div class="auction-header">
                 <span class="auction-title">🏷️ {{ a.title }}</span>
                 <span class="auction-timer" data-end="{{ a.end_time }}">⏳ جاري التحميل...</span>
             </div>
+            {% if a.images and a.images|length > 0 %}
+            <div class="auction-images">
+                {% for img in a.images %}
+                    <img src="{{ img }}" alt="صورة المزاد">
+                {% endfor %}
+            </div>
+            {% endif %}
             <div class="auction-details">
                 <span>السعر الحالي: <b style="color: #25d366;">{{ a.current_price }}</b></span>
                 <span>الحد الأدنى للمزايدة: <b>{{ a.min_bid }}</b></span>
@@ -456,6 +469,8 @@ auction_detail_template = """
         body { background: #000; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .box { background: #111; border: 1px solid #d97706; border-radius: 12px; padding: 25px; width: 100%; max-width: 600px; box-sizing: border-box; margin-top: 20px; }
         h1 { color: #fbbf24; text-align: center; font-size: 20px; margin-bottom: 15px; }
+        .auction-gallery { display: flex; flex-direction: row; overflow-x: auto; gap: 10px; margin-bottom: 15px; background: #000; padding: 10px; border-radius: 8px; border: 1px solid #333; }
+        .auction-gallery img { width: 100%; max-height: 400px; object-fit: contain; border-radius: 6px; flex: 0 0 100%; }
         .info { font-size: 14px; margin-bottom: 10px; color: #ddd; display: flex; justify-content: space-between; background: #000; padding: 10px; border-radius: 8px; border: 1px solid #222; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; outline: none; }
         button { width: 100%; padding: 12px; border-radius: 8px; background: #d97706; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 15px; }
@@ -465,6 +480,13 @@ auction_detail_template = """
 <body>
     <div class="box">
         <h1>🔨 مزاد على: {{ auction.title }}</h1>
+        {% if auction.images and auction.images|length > 0 %}
+        <div class="auction-gallery">
+            {% for img in auction.images %}
+                <img src="{{ img }}" alt="صورة المزاد">
+            {% endfor %}
+        </div>
+        {% endif %}
         <p style="color: #bbb; font-size: 13px; margin-bottom: 15px; text-align: right;">{{ auction.description }}</p>
         <div class="info"><span>السعر الحالي:</span><b style="color: #25d366;">{{ auction.current_price }}</b></div>
         <div class="info"><span>الحد الأدنى للمزايدة:</span><b>{{ auction.min_bid }}</b></div>
@@ -649,7 +671,7 @@ admin_template = """
             
             <div class="section-box">
                 <h3>🔨 إدارة وإطلاق المزادات</h3>
-                <form action="/admin-add-auction" method="POST">
+                <form action="/admin-add-auction" method="POST" enctype="multipart/form-data">
                     <label>عنوان المزاد (اسم القطعة):</label>
                     <input type="text" name="title" placeholder="مثال: ساعة فاخرة نادرة" required>
                     <label>وصف المزاد أو تفاصيله:</label>
@@ -662,6 +684,8 @@ admin_template = """
                     <input type="text" name="max_price" placeholder="مثال: 150 دينار">
                     <label>مدة المزاد بالساعات:</label>
                     <input type="number" name="duration_hours" value="48" required>
+                    <label>صور القطعة للمزاد 📸:</label>
+                    <input type="file" name="auction_images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
                     <button type="submit" style="background: #d97706; margin-top: 10px;">إطلاق المزاد 🚀</button>
                 </form>
                 <div style="margin-top: 15px;">
@@ -886,7 +910,7 @@ def remove_from_cart(cart_id):
 def auction_detail(a_id):
     auction = next((a for a in auctions if a['id'] == a_id), None)
     if not auction: return redirect(url_for('index'))
-    return render_template_string(auction_detail_template, auction=auction)
+    return render_template_string(auction_detail_template, auction=auction, config=site_config)
 
 @app.route('/bid/<int:a_id>', methods=['POST'])
 def place_bid(a_id):
@@ -908,6 +932,7 @@ def admin_add_auction():
     max_price = request.form.get('max_price', '').strip()
     duration_hours = int(request.form.get('duration_hours', 48))
     end_time = datetime.now() + timedelta(hours=duration_hours)
+    images_list = [process_and_compress_image(f) for f in request.files.getlist('auction_images') if f and f.filename != '']
     
     if title and current_price:
         auction_data = {
@@ -917,7 +942,8 @@ def admin_add_auction():
             "current_price": current_price,
             "min_bid": min_bid,
             "max_price": max_price,
-            "end_time": end_time.isoformat()
+            "end_time": end_time.isoformat(),
+            "images": [img for img in images_list if img]
         }
         auctions.insert(0, auction_data)
         auction_id_counter += 1
