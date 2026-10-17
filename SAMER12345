@@ -8,8 +8,13 @@ app = Flask(__name__)
 
 products = []
 notes = []
+reviews = [
+    {"id": 1, "name": "محمد أحمد", "comment": "متجر فخم جداً والقطع أصلية وتوصيل سريع، شكراً لكم!"},
+    {"id": 2, "name": "عمر خالد", "comment": "تجربة شراء ممتازة والتعامل راقي جداً."}
+]
 product_id_counter = 1
 note_id_counter = 1
+review_id_counter = 3
 ADMIN_PASSWORD = "samemomomo**1"
 
 site_controls = {
@@ -162,6 +167,15 @@ default_html_template = """
         .file-upload { border: 2px dashed #25d366; border-radius: 8px; padding: 15px; text-align: center; background: rgba(37, 211, 102, 0.03); cursor: pointer; margin-bottom: 10px; color: {{ config.colors.upload_text }}; font-size: 13px; }
         .submit-btn { background-color: {{ config.colors.submit_btn }}; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 10px; border-radius: 8px; text-align: center; font-size: 13px; margin-bottom: 15px; }
+        
+        /* قسم آراء العملاء في الرئيسية */
+        .reviews-section { width: 100%; max-width: 900px; margin-top: 30px; background: #111; border: 1px solid #222; border-radius: 12px; padding: 20px; box-sizing: border-box; }
+        .reviews-title { color: #ff5252; text-align: center; margin-bottom: 20px; font-size: 18px; }
+        .review-card { background: #000; padding: 12px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; }
+        .review-card p { color: #fff; font-size: 13px; margin: 0 0 5px 0; }
+        .review-card span { color: #25d366; font-size: 11px; font-weight: bold; }
+        .add-review-form { margin-top: 20px; border-top: 1px solid #222; padding-top: 15px; }
+
         .site-footer { width: 100%; max-width: 900px; margin-top: 40px; padding: 20px 0; border-top: 1px solid #222; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
         .footer-socials { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
         .footer-social-link { color: #aaa; text-decoration: none; font-size: 13px; background: #111; padding: 6px 14px; border-radius: 6px; border: 1px solid #222; }
@@ -245,6 +259,27 @@ default_html_template = """
         </form>
     </div>
     {% endif %}
+
+    <!-- قسم آراء العملاء التفاعلي -->
+    <div class="reviews-section">
+        <h3 class="reviews-title">⭐ آراء العملاء</h3>
+        {% for r in reviews %}
+            <div class="review-card">
+                <p>"{{ r.comment }}"</p>
+                <span>- {{ r.name }}</span>
+            </div>
+        {% endfor %}
+        
+        <div class="add-review-form">
+            <h4 style="color: #fff; font-size: 14px; margin-bottom: 10px; text-align: right;">أضف رأيك بكل تجربة:</h4>
+            <form action="/add-review" method="POST">
+                <input type="text" name="reviewer_name" placeholder="اسمك الكريم" required style="width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none;">
+                <textarea name="reviewer_comment" rows="2" placeholder="اكتب رأيك هنا..." required style="width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none;"></textarea>
+                <button type="submit" style="background: #25d366; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%;">نشر الرأي</button>
+            </form>
+        </div>
+    </div>
+
     {% if controls.enable_socials or controls.enable_copyright %}
     <footer class="site-footer">
         {% if controls.enable_socials and controls.social_links|length > 0 %}
@@ -363,7 +398,7 @@ admin_template = """
     <title>لوحة الإعدادات والتحكم</title>
     <style>
         body { background: #000; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; width: 100%; max-width: 650px; margin-top: 20px; }
+        .container { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; width: 100%; max-width: 900px; margin-top: 20px; box-sizing: border-box; }
         h2, h3 { color: #fff; text-align: center; margin-bottom: 20px; }
         input[type="text"], input[type="password"], textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
         input[type="color"] { width: 50px; height: 32px; border: 1px solid #333; border-radius: 6px; background: #000; cursor: pointer; padding: 0; vertical-align: middle; }
@@ -401,9 +436,20 @@ admin_template = """
                 <h3>💻 محرر الكود الداخلي (لتعديل واجهة المتجر مباشرة)</h3>
                 <form action="/update-code" method="POST">
                     <label>كود HTML / CSS للواجهة الرئيسية:</label>
-                    <textarea name="custom_html" rows="10" style="font-family: monospace; font-size: 11px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
+                    <textarea name="custom_html" rows="18" style="font-family: monospace; font-size: 12px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
                     <button type="submit">حفظ وتحديث كود الواجهة</button>
                 </form>
+            </div>
+
+            <div class="section-box">
+                <h3>⭐ إدارة وعرض آراء العملاء</h3>
+                {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 10px; font-size: 12px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
+                {% for r in reviews %}
+                    <div class="product-row">
+                        <span><b>{{ r.name }}:</b> {{ r.comment }}</span>
+                        <form action="/delete-review/{{ r.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
+                    </div>
+                {% endfor %}
             </div>
 
             <div class="section-box">
@@ -597,7 +643,7 @@ def process_and_compress_image(image_file):
 @app.route('/')
 def index():
     global current_html_template
-    return render_template_string(current_html_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+    return render_template_string(current_html_template, products=products, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, error=None)
 
 @app.route('/product/<int:p_id>')
 def product_detail(p_id):
@@ -616,6 +662,27 @@ def update_code():
     new_code = request.form.get('custom_html', '').strip()
     if new_code:
         current_html_template = new_code
+    return redirect(url_for('admin'))
+
+@app.route('/add-review', methods=['POST'])
+def add_review():
+    global review_id_counter, reviews
+    name = request.form.get('reviewer_name', '').strip()
+    comment = request.form.get('reviewer_comment', '').strip()
+    if name and comment:
+        review_data = {
+            "id": review_id_counter,
+            "name": name,
+            "comment": comment
+        }
+        reviews.insert(0, review_data)
+        review_id_counter += 1
+    return redirect(url_for('index'))
+
+@app.route('/delete-review/<int:r_id>', methods=['POST'])
+def delete_review(r_id):
+    global reviews
+    reviews = [r for r in reviews if r['id'] != r_id]
     return redirect(url_for('admin'))
 
 @app.route('/add-note', methods=['POST'])
@@ -710,7 +777,7 @@ def admin():
             authorized = True
         else:
             error = True
-    return render_template_string(admin_template, products=products, notes=notes, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
+    return render_template_string(admin_template, products=products, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
 
 @app.route('/update-logo', methods=['POST'])
 def update_logo():
@@ -727,73 +794,4 @@ def update_controls():
     global site_controls
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
-    site_controls['enable_socials'] = True if request.form.get('enable_socials') == 'on' else False
-    site_controls['enable_copyright'] = True if request.form.get('enable_copyright') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-texts', methods=['POST'])
-def update_texts():
-    global site_config, text_visibility
-    for key in site_config['texts']:
-        form_txt = request.form.get(f'txt_{key}')
-        if form_txt: site_config['texts'][key] = form_txt
-        text_visibility[key] = True if request.form.get(f'vis_{key}') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-socials', methods=['POST'])
-def update_socials():
-    global site_controls
-    s1_name, s1_url = request.form.get('s1_name', '').strip(), request.form.get('s1_url', '').strip()
-    s2_name, s2_url = request.form.get('s2_name', '').strip(), request.form.get('s2_url', '').strip()
-    new_links = []
-    if s1_name and s1_url: new_links.append({"name": s1_name, "url": s1_url})
-    if s2_name and s2_url: new_links.append({"name": s2_name, "url": s2_url})
-    site_controls['social_links'] = new_links
-    return redirect(url_for('admin'))
-
-@app.route('/update-copyright', methods=['POST'])
-def update_copyright():
-    global site_controls
-    text = request.form.get('copyright_text', '').strip()
-    if text: site_controls['copyright_text'] = text
-    return redirect(url_for('admin'))
-
-@app.route('/update-password', methods=['POST'])
-def update_password():
-    global ADMIN_PASSWORD
-    new_pwd = request.form.get('new_password', '').strip()
-    if new_pwd: ADMIN_PASSWORD = new_pwd
-    return redirect(url_for('admin'))
-
-@app.route('/update-config', methods=['POST'])
-def update_config():
-    global site_config
-    site_config['title'] = request.form.get('title', site_config['title'])
-    site_config['subtitle'] = request.form.get('subtitle', site_config['subtitle'])
-    for key in site_config['colors']:
-        val = request.form.get(f'c_{key}')
-        if val: site_config['colors'][key] = val
-    if request.form.get('remove_bg_image') == 'on': site_config['bg_image'] = ""
-    bg_file = request.files.get('bg_image_file')
-    if bg_file and bg_file.filename != '':
-        compressed_bg = process_and_compress_image(bg_file)
-        if compressed_bg: site_config['bg_image'] = compressed_bg
-    return redirect(url_for('admin'))
-
-@app.route('/delete/<int:p_id>', methods=['POST'])
-def delete_product(p_id):
-    global products
-    products = [p for p in products if p['id'] != p_id]
-    return redirect(url_for('admin'))
-
-@app.route('/toggle-sold/<int:p_id>', methods=['POST'])
-def toggle_sold(p_id):
-    global products
-    for p in products:
-        if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
-    return redirect(url_for('admin'))
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn'
