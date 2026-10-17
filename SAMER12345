@@ -78,7 +78,7 @@ site_config = {
     "subtitle": "لكل قطعة حكاية",
     "bg_image": "",
     "texts": {
-        "heading_products": "المنتجات والمعروضات",
+        "heading_products": "المنتجات المعروضه",
         "no_products": "لا توجد منتجات معروضة حالياً.",
         "heading_auctions": "🔥 المزادات الحالية المشتعلة",
         "toggle_btn_open": "➕ إضافة قطعة جديدة",
@@ -112,7 +112,7 @@ site_config = {
         "title": "#ff5252",                
         "subtitle": "#aaaaaa",             
         "logo_bg": "#000000",              
-        "logo_border": "#ffffff",          
+        "logo_border": "#ef4444",          
         "products_heading": "#ffffff",     
         "no_products": "#777777",          
         "auctions_heading": "#fbbf24",     
@@ -176,9 +176,9 @@ default_html_template = """
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
         
-        /* إطار الشعار المتكيف تماماً حسب حجم الصورة بدون فراغات مع الإضاءة والتوهج الأصلي */
-        .logo-img-container { display: inline-flex; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 14px; padding: 4px; box-shadow: 0 0 15px rgba(255, 255, 255, 0.15); max-width: 90%; overflow: hidden; box-sizing: border-box; }
-        .logo-img-container img { display: block; width: auto; height: auto; max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 10px; }
+        /* إطار الشعار المربع الكلاسيكي تماماً كما طلبته (مع الإطار الأحمر والإضاءة) */
+        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 16px; padding: 6px; box-shadow: 0 0 15px rgba(239, 68, 68, 0.35); width: 150px; height: 150px; overflow: hidden; box-sizing: border-box; }
+        .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
 
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         .search-box { width: 100%; max-width: 900px; margin-bottom: 20px; }
@@ -753,12 +753,6 @@ admin_template = """
         .collapsible-header { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 14px 18px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-top: 15px; user-select: none; }
         .collapsible-header:hover { background: #222; color: #25d366; }
         .collapsible-content { display: none; background: #0a0a0a; border: 1px solid #222; border-top: none; padding: 15px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-bottom: 15px; }
-        
-        /* أداة المعاينة والقص تماماً مثل أداة المعرض (تفاعل باللمس/الماوس وتقريب وإبعاد) */
-        .crop-container { width: 100%; height: 260px; background: #000; border: 2px dashed #555; border-radius: 8px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; touch-action: none; }
-        .crop-container img { position: absolute; cursor: grab; max-width: none; user-select: none; }
-        .crop-controls { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; justify-content: center; }
-        .crop-controls button { width: auto; padding: 8px 14px; margin: 0; background: #222; border: 1px solid #444; font-size: 12px; }
     </style>
 </head>
 <body>
@@ -943,30 +937,17 @@ admin_template = """
                 </div>
             </div>
 
-            <!-- إدارة ومعاينة شعار الموقع بأداة قص المعرض الاحترافية -->
+            <!-- إدارة صورة شعار الموقع (رفع مباشر بدون قص) -->
             <div class="collapsible-header" onclick="toggleSection('sec_logo')">
-                <span>🖼️ إدارة ومعاينة شعار الموقع</span>
+                <span>🖼️ إدارة صورة شعار الموقع</span>
                 <span id="icon-sec_logo">▼</span>
             </div>
             <div id="sec_logo" class="collapsible-content">
-                <form action="/update-logo" method="POST">
+                <form action="/update-logo" method="POST" enctype="multipart/form-data">
                     <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار في الموقع</label>
-                    
                     <label>اختر صورة الشعار:</label>
-                    <input type="file" id="logoInputFile" accept="image/*" style="color: #fff; margin-bottom: 10px;" onchange="initGalleryCropper(event)">
-                    
-                    <div class="crop-container" id="cropContainer" style="display: none;">
-                        <img id="cropperImage" alt="معاينة">
-                    </div>
-                    
-                    <div class="crop-controls" id="cropControls" style="display: none;">
-                        <button type="button" onclick="zoomImage(0.1)">➕ تقريب</button>
-                        <button type="button" onclick="zoomImage(-0.1)">➖ إبعاد</button>
-                        <button type="button" onclick="resetCrop()">🔄 إعادة ضبط</button>
-                    </div>
-
-                    <input type="hidden" name="cropped_logo_data" id="croppedLogoData">
-                    <button type="submit" style="background: #25d366; margin-top: 10px;">تأكيد وحفظ الشعار المقصوص ✅</button>
+                    <input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
+                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ صورة الشعار ✅</button>
                 </form>
             </div>
 
@@ -1012,88 +993,6 @@ admin_template = """
                 content.style.display = 'block';
                 icon.innerText = '▲';
             }
-        }
-
-        let imgObj = new Image();
-        let scale = 1;
-        let posX = 0, posY = 0;
-        let isDragging = false;
-        let startX, startY;
-
-        function initGalleryCropper(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imgObj.src = e.target.result;
-                imgObj.onload = function() {
-                    document.getElementById('cropContainer').style.display = 'flex';
-                    document.getElementById('cropControls').style.display = 'flex';
-                    const cImg = document.getElementById('cropperImage');
-                    cImg.src = imgObj.src;
-                    scale = 1;
-                    posX = 0;
-                    posY = 0;
-                    updateTransform();
-                    prepareGalleryImage();
-                }
-            }
-            reader.readAsDataURL(file);
-        }
-
-        const cImg = document.getElementById('cropperImage');
-
-        if(cImg) {
-            cImg.addEventListener('mousedown', startDrag);
-            cImg.addEventListener('touchstart', startDragTouch, {passive: true});
-            window.addEventListener('mousemove', drag);
-            window.addEventListener('touchmove', dragTouch, {passive: true});
-            window.addEventListener('mouseup', endDrag);
-            window.addEventListener('touchend', endDrag);
-        }
-
-        function startDrag(e) { isDragging = true; startX = e.clientX - posX; startY = e.clientY - posY; e.preventDefault(); }
-        function startDragTouch(e) { if(e.touches.length === 1) { isDragging = true; startX = e.touches[0].clientX - posX; startY = e.touches[0].clientY - posY; } }
-        function drag(e) { if (!isDragging) return; posX = e.clientX - startX; posY = e.clientY - startY; updateTransform(); }
-        function dragTouch(e) { if (!isDragging || e.touches.length !== 1) return; posX = e.touches[0].clientX - startX; posY = e.touches[0].clientY - startY; updateTransform(); }
-        function endDrag() { isDragging = false; prepareGalleryImage(); }
-
-        function zoomImage(delta) {
-            scale += delta;
-            if(scale < 0.2) scale = 0.2;
-            updateTransform();
-            prepareGalleryImage();
-        }
-
-        function resetCrop() {
-            scale = 1;
-            posX = 0;
-            posY = 0;
-            updateTransform();
-            prepareGalleryImage();
-        }
-
-        function updateTransform() {
-            cImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
-        }
-
-        function prepareGalleryImage() {
-            const canvas = document.createElement('canvas');
-            const origW = imgObj.width;
-            const origH = imgObj.height;
-            canvas.width = origW;
-            canvas.height = origH;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.save();
-            ctx.translate(canvas.width / 2 + (posX * (origW / cImg.clientWidth)), canvas.height / 2 + (posY * (origH / cImg.clientHeight)));
-            ctx.scale(scale, scale);
-            ctx.drawImage(imgObj, -origW / 2, -origH / 2);
-            ctx.restore();
-
-            document.getElementById('croppedLogoData').value = canvas.toDataURL('image/jpeg', 0.85);
         }
     </script>
 </body>
@@ -1419,9 +1318,10 @@ def admin_add_product():
 def update_logo():
     global site_controls
     site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
-    cropped_data = request.form.get('cropped_logo_data', '')
-    if cropped_data:
-        site_controls['logo_image'] = cropped_data
+    logo_file = request.files.get('logo_file')
+    if logo_file and logo_file.filename != '':
+        comp_logo = process_and_compress_image(logo_file)
+        if comp_logo: site_controls['logo_image'] = comp_logo
     return redirect(url_for('admin'))
 
 @app.route('/update-controls', methods=['POST'])
