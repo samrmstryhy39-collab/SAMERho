@@ -37,6 +37,8 @@ text_visibility = {
     "input_price_placeholder": True,
     "label_quantity": True,
     "input_quantity_placeholder": True,
+    "label_description": True,
+    "input_description_placeholder": True,
     "label_contact_method": True,
     "contact_type_instagram": True,
     "contact_type_phone": True,
@@ -65,6 +67,8 @@ site_config = {
         "input_price_placeholder": "أدخل السعر",
         "label_quantity": "الكمية المتوفرة",
         "input_quantity_placeholder": "أدخل الكمية (مثال: 1)",
+        "label_description": "نبذة أو قصة عن المنتج",
+        "input_description_placeholder": "اكتب قصة هذه القطعة أو نبذة عنها...",
         "label_contact_method": "طريقة التواصل",
         "contact_type_instagram": "حساب Instagram",
         "contact_type_phone": "الرقم الخاص بي",
@@ -133,7 +137,7 @@ html_template = """
         .form-main-title { color: {{ config.colors.form_main_title }}; font-size: 18px; text-align: center; margin-bottom: 20px; }
         .input-group { margin-bottom: 15px; }
         .input-group label { display: block; margin-bottom: 5px; font-size: 13px; color: {{ config.colors.label_title }}; }
-        .input-group input, .input-group select { width: 100%; padding: 12px; border: 1px solid #333; border-radius: 8px; background: #000; color: white; font-size: 14px; box-sizing: border-box; outline: none; margin-bottom: 8px; }
+        .input-group input, .input-group textarea, .input-group select { width: 100%; padding: 12px; border: 1px solid #333; border-radius: 8px; background: #000; color: white; font-size: 14px; box-sizing: border-box; outline: none; margin-bottom: 8px; }
         .file-upload { border: 2px dashed #25d366; border-radius: 8px; padding: 15px; text-align: center; background: rgba(37, 211, 102, 0.03); cursor: pointer; margin-bottom: 10px; color: {{ config.colors.upload_text }}; font-size: 13px; }
         .submit-btn { background-color: {{ config.colors.submit_btn }}; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 10px; border-radius: 8px; text-align: center; font-size: 13px; margin-bottom: 15px; }
@@ -196,6 +200,10 @@ html_template = """
             <div class="input-group">
                 <label style="color: {{ config.colors.label_title }};">{{ config.texts.label_quantity }}</label>
                 <input type="text" name="quantity" placeholder="{{ config.texts.input_quantity_placeholder }}" value="1">
+            </div>
+            <div class="input-group">
+                <label style="color: {{ config.colors.label_title }};">{{ config.texts.label_description }}</label>
+                <textarea name="description" rows="3" placeholder="{{ config.texts.input_description_placeholder }}"></textarea>
             </div>
             {% if vis.label_contact_method or vis.contact_type_instagram or vis.contact_type_phone or vis.input_contact_placeholder %}
             <div class="input-group">
@@ -265,7 +273,8 @@ product_detail_template = """
         .gallery { display: flex; flex-direction: row; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
         .gallery img { width: 100%; max-height: 450px; object-fit: contain; border-radius: 8px; background: #000; border: 1px solid #333; flex: 0 0 100%; }
         .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
-        .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 20px; }
+        .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
+        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
         .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 15px; }
         .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
     </style>
@@ -274,7 +283,16 @@ product_detail_template = """
     <div class="detail-container">
         <h1 class="product-title">{{ product.title }}</h1>
         <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
+        
+        {% if product.description %}
+        <div class="product-desc">
+            <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
+            {{ product.description }}
+        </div>
+        {% endif %}
+
         <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
+        
         {% if controls.enable_contact_btn and not product.is_sold %}
             {% if product.contact_type == 'instagram' %}
                 <a class="contact-btn" href="https://instagram.com/{{ product.contact_value.replace('@', '') }}" target="_blank">{% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}</a>
@@ -363,6 +381,10 @@ admin_template = """
                     <div class="input-group">
                         <label>{{ config.texts.label_quantity }}</label>
                         <input type="text" name="quantity" placeholder="{{ config.texts.input_quantity_placeholder }}" value="1">
+                    </div>
+                    <div class="input-group">
+                        <label>{{ config.texts.label_description }}</label>
+                        <textarea name="description" rows="3" placeholder="{{ config.texts.input_description_placeholder }}"></textarea>
                     </div>
                     {% if vis.label_contact_method or vis.contact_type_instagram or vis.contact_type_phone or vis.input_contact_placeholder %}
                         {% if vis.label_contact_method %}<label>{{ config.texts.label_contact_method }}</label>{% endif %}
@@ -516,12 +538,13 @@ def add_product():
     title = request.form.get('title')
     price = request.form.get('price', '')
     quantity = request.form.get('quantity', '1').strip()
+    description = request.form.get('description', '').strip()
     contact_type = request.form.get('contact_type', 'phone')
     contact_value = request.form.get('contact_value', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     images_list = [img for img in images_list if img]
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "description": description, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
         product_id_counter += 1
     return redirect(url_for('index'))
 
@@ -531,12 +554,13 @@ def admin_add_product():
     title = request.form.get('title')
     price = request.form.get('price', '')
     quantity = request.form.get('quantity', '1').strip()
+    description = request.form.get('description', '').strip()
     contact_type = request.form.get('contact_type', 'phone')
     contact_value = request.form.get('contact_value', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     images_list = [img for img in images_list if img]
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "description": description, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
         product_id_counter += 1
     return redirect(url_for('admin'))
 
