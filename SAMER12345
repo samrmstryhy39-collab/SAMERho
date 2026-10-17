@@ -176,9 +176,9 @@ default_html_template = """
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
         
-        /* تنسيق إطار الشعار الأصلي ليتكيف حسب أبعاد الصورة تماماً مع الإضاءة والتوهج */
-        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 14px; padding: 5px; box-shadow: 0 0 15px rgba(255, 255, 255, 0.15); max-width: 90%; }
-        .logo-img-container img { display: block; max-width: 100%; max-height: 320px; width: auto; height: auto; object-fit: contain; border-radius: 10px; margin: 0 auto; }
+        /* إطار الشعار المتكيف تماماً حسب حجم الصورة بدون فراغات مع الإضاءة والتوهج الأصلي */
+        .logo-img-container { display: inline-flex; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 14px; padding: 4px; box-shadow: 0 0 15px rgba(255, 255, 255, 0.15); max-width: 90%; overflow: hidden; box-sizing: border-box; }
+        .logo-img-container img { display: block; width: auto; height: auto; max-width: 100%; max-height: 280px; object-fit: contain; border-radius: 10px; }
 
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         .search-box { width: 100%; max-width: 900px; margin-bottom: 20px; }
