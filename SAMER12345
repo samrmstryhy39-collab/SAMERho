@@ -23,7 +23,7 @@ site_controls = {
     "enable_socials": True,       
     "enable_copyright": True,
     "enable_contact_btn": True,   
-    "enable_reviews_page": True,  # تفعيل صفحة آراء العملاء المستقلة
+    "enable_reviews_page": True,  
     "use_logo_image": False,
     "logo_image": "",
     "social_links": [
@@ -290,7 +290,6 @@ default_html_template = """
 </body>
 </html>
 """
-
 reviews_page_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -649,7 +648,6 @@ admin_template = """
 </body>
 </html>
 """
-
 def process_and_compress_image(image_file):
     try:
         img = Image.open(image_file)
@@ -885,7 +883,7 @@ def delete_product(p_id):
 @app.route('/toggle-sold/<int:p_id>', methods=['POST'])
 def toggle_sold(p_id):
     global products
-    for p:
+    for p in products:
         if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
     return redirect(url_for('admin'))
 
