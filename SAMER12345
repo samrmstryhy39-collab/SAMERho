@@ -101,7 +101,7 @@ site_config = {
         "back_home": "← العودة إلى المتجر الرئيسي",
         "view_details": "عرض التفاصيل",
         "search_placeholder": "🔍 ابحث عن عنصر أو منتج...",
-        "contact_word": "تواصل",
+        "contact_word": "شراء",
         "bid_name_label": "اسمك الكريم:",
         "bid_phone_label": "رقم هاتفك للتواصل:",
         "bid_amount_label": "قيمة السعر المقترح للمزايدة:",
@@ -339,16 +339,6 @@ default_html_template = """
                 <label style="color: {{ config.colors.label_title }};">{{ config.texts.label_description }}</label>
                 <textarea name="description" rows="3" placeholder="{{ config.texts.input_description_placeholder }}"></textarea>
             </div>
-            {% if vis.label_contact_method or vis.contact_type_instagram or vis.contact_type_phone or vis.input_contact_placeholder %}
-            <div class="input-group">
-                {% if vis.label_contact_method %}<label style="color: {{ config.colors.label_title }};">{{ config.texts.label_contact_method }}</label>{% endif %}
-                <select name="contact_type">
-                    {% if vis.contact_type_instagram %}<option value="instagram">{{ config.texts.contact_type_instagram }}</option>{% endif %}
-                    {% if vis.contact_type_phone %}<option value="phone">{{ config.texts.contact_type_phone }}</option>{% endif %}
-                </select>
-                <input type="text" name="contact_value" {% if vis.input_contact_placeholder %}placeholder="{{ config.texts.input_contact_placeholder }}"{% endif %}>
-            </div>
-            {% endif %}
             {% if vis.upload_text %}
             <div class="file-upload" onclick="document.getElementById('imagesInput').click();">
                 {{ config.texts.upload_text }}
@@ -582,9 +572,13 @@ product_detail_template = """
         .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
         .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
         .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
-        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; }
+        .buy-toggle-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
+        .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
+        .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
+        .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
         .add-cart-detail { display: block; text-align: center; background: {{ config.colors.cart_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 15px; border: none; width: 100%; cursor: pointer; }
         .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
+        .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -598,13 +592,30 @@ product_detail_template = """
         </div>
         {% endif %}
         <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
+        
         {% if controls.enable_contact_btn and not product.is_sold %}
-            {% if product.contact_type == 'instagram' %}
-                <a class="contact-btn" href="https://instagram.com/{{ product.contact_value.replace('@', '') }}" target="_blank">{% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}</a>
-            {% else %}
-                <a class="contact-btn" href="https://wa.me/{{ product.contact_value }}" target="_blank">{% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}</a>
-            {% endif %}
+            <button class="buy-toggle-btn" onclick="toggleCheckout()">{{ config.texts.contact_word }} 🛒</button>
+            <div id="checkoutForm" class="checkout-form {% if error %}active{% endif %}" style="display: {% if error %}block{% else %}none{% endif %};">
+                <h3 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">أدخل بيانات الشخصية لإتمام الشراء:</h3>
+                {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+                <form action="/buy-product/{{ product.id }}" method="POST">
+                    <label style="font-size: 12px; color: #ccc;">الاسم الثلاثي:</label>
+                    <input type="text" name="full_name" placeholder="الاسم الثلاثي" required>
+                    
+                    <label style="font-size: 12px; color: #ccc;">المحافظة:</label>
+                    <input type="text" name="province" placeholder="المحافظة (مثال: عمان)" required>
+                    
+                    <label style="font-size: 12px; color: #ccc;">الشارع:</label>
+                    <input type="text" name="street" placeholder="اسم الشارع أو المنطقة" required>
+                    
+                    <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label>
+                    <input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                    
+                    <button type="submit" class="checkout-submit">إرسال الطلب عبر الواتساب 🚀</button>
+                </form>
+            </div>
         {% endif %}
+
         {% if controls.enable_cart and not product.is_sold %}
             <form action="/add-to-cart/{{ product.id }}" method="POST"><button type="submit" class="add-cart-detail">أضف إلى السلة 🛒</button></form>
         {% elif product.is_sold %}
@@ -612,6 +623,18 @@ product_detail_template = """
         {% endif %}
         {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
     </div>
+
+    <script>
+        function toggleCheckout() {
+            const form = document.getElementById('checkoutForm');
+            if (form.style.display === 'block') {
+                form.style.display = 'none';
+            } else {
+                form.style.display = 'block';
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    </script>
 </body>
 </html>
 """
@@ -689,7 +712,7 @@ admin_template = """
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
             <div class="section-box">
-                <h3>📱 رقم الواتساب الخاص بك (لتلقي المزايدات)</h3>
+                <h3>📱 رقم الواتساب الخاص بك (لتلقي الطلبات والمزادات)</h3>
                 <form action="/update-admin-whatsapp" method="POST">
                     <label>رقم الواتساب (مع رمز الدولة بدون +):</label>
                     <input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000" required>
@@ -717,7 +740,7 @@ admin_template = """
                     <button type="submit" style="background: #d97706; margin-top: 10px;">إطلاق المزاد 🚀</button>
                 </form>
                 <div style="margin-top: 15px;">
-                    <h4 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">المزادات النشطة (مع تفاصيل أرقام المزايدين):</h4>
+                    <h4 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">المزادات النشطة:</h4>
                     {% if auctions|length == 0 %}<p style="color: #777; font-size: 12px; text-align: center;">لا توجد مزادات نشطة.</p>{% endif %}
                     {% for a in auctions %}
                         <div class="product-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
@@ -801,7 +824,7 @@ admin_template = """
                     <label class="checkbox-label"><input type="checkbox" name="enable_auctions" {% if controls.enable_auctions %}checked{% endif %}> تفعيل قسم المزادات</label>
                     <label class="checkbox-label"><input type="checkbox" name="block_posting" {% if controls.block_posting %}checked{% endif %}> منع المستخدمين من الإضافة</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_search" {% if controls.enable_search %}checked{% endif %}> تفعيل البحث</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enable_contact_btn" {% if controls.enable_contact_btn %}checked{% endif %}> تفعيل زر التواصل</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_contact_btn" {% if controls.enable_contact_btn %}checked{% endif %}> تفعيل زر الشراء</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_socials" {% if controls.enable_socials %}checked{% endif %}> تفعيل السوشيال ميديا</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_copyright" {% if controls.enable_copyright %}checked{% endif %}> تفعيل حقوق النشر</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_reviews_page" {% if controls.enable_reviews_page %}checked{% endif %}> تفعيل آراء العملاء</label>
@@ -955,10 +978,8 @@ def place_bid(a_id):
     auction = next((a for a in auctions if a['id'] == a_id), None)
     if not auction: return redirect(url_for('index'))
 
-    # إزالة المسافات من رقم الهاتف للفحص الصحيح
     clean_phone = bidder_phone.replace(" ", "")
 
-    # التحقق من شروط الهاتف (أرقام فقط بدون مسافات وأقل شي 7 أرقام)
     if not clean_phone.isdigit() or len(clean_phone) < 7:
         return render_template_string(
             auction_detail_template, 
@@ -969,7 +990,6 @@ def place_bid(a_id):
             error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!"
         )
 
-    # التحقق من شروط السعر المقترح (أرقام فقط بدون أحرف)
     if not bid_amount.isdigit():
         return render_template_string(
             auction_detail_template, 
@@ -985,7 +1005,7 @@ def place_bid(a_id):
         auction['last_bidder_name'] = bidder_name
         auction['last_bidder_phone'] = bidder_phone
         
-        msg = f"مرحباً سامر، لدي مزايدة جديدة على القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
+        msg = f"مرحباً سامر، لدي مزايدة جديدة\nعلى القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
         encoded_msg = urllib.parse.quote(msg)
         whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
         whatsapp_url = f"https://wa.me/{whatsapp_number}?text={encoded_msg}"
@@ -993,6 +1013,36 @@ def place_bid(a_id):
         return redirect(whatsapp_url)
         
     return redirect(url_for('auction_detail', a_id=a_id))
+
+@app.route('/buy-product/<int:p_id>', methods=['POST'])
+def buy_product(p_id):
+    full_name = request.form.get('full_name', '').strip()
+    province = request.form.get('province', '').strip()
+    street = request.form.get('street', '').strip()
+    phone = request.form.get('phone', '').strip()
+
+    product = next((p for p in products if p['id'] == p_id), None)
+    if not product: return redirect(url_for('index'))
+
+    clean_phone = phone.replace(" ", "")
+    if not clean_phone.isdigit() or len(clean_phone) < 7:
+        return render_template_string(
+            product_detail_template,
+            product=product,
+            config=site_config,
+            controls=site_controls,
+            vis=text_visibility,
+            error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!"
+        )
+
+    if full_name and province and street and phone:
+        msg = f"مرحباً سامر، لدي طلب شراء جديد\nعلى القطعة: {product['title']} (السعر: {product['price']})\nاسم الزبون: {full_name}\nالمحافظة: {province}\nالشارع: {street}\nرقم الهاتف: {phone}"
+        encoded_msg = urllib.parse.quote(msg)
+        whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
+        whatsapp_url = f"https://wa.me/{whatsapp_number}?text={encoded_msg}"
+        return redirect(whatsapp_url)
+
+    return redirect(url_for('product_detail', p_id=p_id))
 
 @app.route('/update-admin-whatsapp', methods=['POST'])
 def update_admin_whatsapp():
@@ -1046,7 +1096,7 @@ def reviews_page():
 def product_detail(p_id):
     product = next((p for p in products if p['id'] == p_id), None)
     if not product: return redirect(url_for('index'))
-    return render_template_string(product_detail_template, product=product, config=site_config, controls=site_controls, vis=text_visibility)
+    return render_template_string(product_detail_template, product=product, config=site_config, controls=site_controls, vis=text_visibility, error=None)
 
 @app.route('/copyright')
 def copyright_page():
