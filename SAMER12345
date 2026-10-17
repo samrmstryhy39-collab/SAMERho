@@ -733,4 +733,306 @@ product_detail_template = """
         .gallery img { width: 100%; max-height: 450px; object-fit: contain; border-radius: 8px; background: #000; border: 1px solid #333; flex: 0 0 100%; }
         .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
         .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
-        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; c
+        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 15px; }
+        .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="detail-container">
+        <h1 class="product-title">{{ product.title }}</h1>
+        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
+        {% if product.description %}
+        <div class="product-desc">
+            <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
+            {{ product.description }}
+        </div>
+        {% endif %}
+        <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
+        {% if controls.enable_contact_btn and not product.is_sold %}
+            {% if product.contact_type == 'instagram' %}
+                <a class="contact-btn" href="https://instagram.com/{{ product.contact_value.replace('@', '') }}" target="_blank">{% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}</a>
+            {% else %}
+                <a class="contact-btn" href="https://wa.me/{{ product.contact_value }}" target="_blank">{% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}</a>
+            {% endif %}
+        {% elif product.is_sold %}
+            <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
+        {% endif %}
+        {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
+    </div>
+</body>
+</html>
+"""
+
+copyright_template = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حقوق النشر والشروط</title>
+    <style>
+        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .box { background: #111; border: 1px solid #222; padding: 30px; border-radius: 12px; width: 100%; flex: 1; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
+        .content-area { max-width: 900px; margin: 0 auto; width: 100%; }
+        h1 { color: #25d366; text-align: center; font-size: 22px; margin-bottom: 25px; } 
+        p { color: #ddd; font-size: 15px; line-height: 1.8; white-space: pre-wrap; text-align: right; } 
+        .back { display: block; text-align: center; margin-top: 30px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <div class="content-area">
+            <h1>حقوق النشر والشروط</h1>
+            <p>{{ text }}</p>
+        </div>
+        <div>
+            <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+current_html_template = default_html_template
+def process_and_compress_image(image_file):
+    try:
+        img = Image.open(image_file)
+        if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+        img.thumbnail((800, 800))
+        buffer = BytesIO()
+        img.save(buffer, format="JPEG", quality=75)
+        return f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"
+    except Exception:
+        return None
+
+@app.route('/')
+def index():
+    global current_html_template
+    return render_template_string(current_html_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+
+@app.route('/reviews')
+def reviews_page():
+    if not site_controls['enable_reviews_page']: return redirect(url_for('index'))
+    return render_template_string(reviews_page_template, reviews=reviews, config=site_config)
+
+@app.route('/product/<int:p_id>')
+def product_detail(p_id):
+    product = next((p for p in products if p['id'] == p_id), None)
+    if not product: return redirect(url_for('index'))
+    return render_template_string(product_detail_template, product=product, config=site_config, controls=site_controls, vis=text_visibility)
+
+@app.route('/copyright')
+def copyright_page():
+    if not site_controls['enable_copyright']: return redirect(url_for('index'))
+    return render_template_string(copyright_template, text=site_controls['copyright_text'])
+
+@app.route('/update-code', methods=['POST'])
+def update_code():
+    global current_html_template
+    new_code = request.form.get('custom_html', '').strip()
+    if new_code:
+        current_html_template = new_code
+    return redirect(url_for('admin'))
+
+@app.route('/add-review', methods=['POST'])
+def add_review():
+    global review_id_counter, reviews
+    name = request.form.get('reviewer_name', '').strip()
+    comment = request.form.get('reviewer_comment', '').strip()
+    if name and comment:
+        review_data = {
+            "id": review_id_counter,
+            "name": name,
+            "comment": comment
+        }
+        reviews.insert(0, review_data)
+        review_id_counter += 1
+    return redirect(url_for('reviews_page'))
+
+@app.route('/delete-review/<int:r_id>', methods=['POST'])
+def delete_review(r_id):
+    global reviews
+    reviews = [r for r in reviews if r['id'] != r_id]
+    return redirect(url_for('admin'))
+
+@app.route('/add-note', methods=['POST'])
+def add_note():
+    global note_id_counter
+    title = request.form.get('note_title', '').strip()
+    content = request.form.get('note_content', '').strip()
+    images_list = [process_and_compress_image(f) for f in request.files.getlist('note_images') if f and f.filename != '']
+    images_list = [img for img in images_list if img]
+    
+    if title and content:
+        note_data = {
+            "id": note_id_counter,
+            "title": title,
+            "content": content,
+            "images": images_list
+        }
+        notes.insert(0, note_data)
+        note_id_counter += 1
+    return redirect(url_for('admin'))
+
+@app.route('/delete-note/<int:n_id>', methods=['POST'])
+def delete_note(n_id):
+    global notes
+    notes = [n for n in notes if n['id'] != n_id]
+    return redirect(url_for('admin'))
+
+@app.route('/add', methods=['POST'])
+def add_product():
+    global product_id_counter
+    if site_controls['block_posting']: return redirect(url_for('index'))
+    title = request.form.get('title')
+    price = request.form.get('price', '')
+    quantity = request.form.get('quantity', '1').strip()
+    description = request.form.get('description', '').strip()
+    contact_type = request.form.get('contact_type', 'phone')
+    contact_value = request.form.get('contact_value', '').strip()
+    images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
+    images_list = [img for img in images_list if img]
+    
+    if title:
+        product_data = {
+            "id": product_id_counter,
+            "title": title,
+            "price": price,
+            "quantity": quantity,
+            "description": description,
+            "contact_type": contact_type,
+            "contact_value": contact_value,
+            "images": images_list,
+            "is_sold": False
+        }
+        products.insert(0, product_data)
+        product_id_counter += 1
+    return redirect(url_for('index'))
+
+@app.route('/admin-add-product', methods=['POST'])
+def admin_add_product():
+    global product_id_counter
+    title = request.form.get('title')
+    price = request.form.get('price', '')
+    quantity = request.form.get('quantity', '1').strip()
+    description = request.form.get('description', '').strip()
+    contact_type = request.form.get('contact_type', 'phone')
+    contact_value = request.form.get('contact_value', '').strip()
+    images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
+    images_list = [img for img in images_list if img]
+    
+    if title:
+        product_data = {
+            "id": product_id_counter,
+            "title": title,
+            "price": price,
+            "quantity": quantity,
+            "description": description,
+            "contact_type": contact_type,
+            "contact_value": contact_value,
+            "images": images_list,
+            "is_sold": False
+        }
+        products.insert(0, product_data)
+        product_id_counter += 1
+    return redirect(url_for('admin'))
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    global ADMIN_PASSWORD, current_html_template
+    authorized = False
+    error = False
+    if request.method == 'POST':
+        if request.form.get('password') == ADMIN_PASSWORD:
+            authorized = True
+        else:
+            error = True
+    return render_template_string(admin_template, products=products, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
+
+@app.route('/update-logo', methods=['POST'])
+def update_logo():
+    global site_controls
+    site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
+    logo_file = request.files.get('logo_file')
+    if logo_file and logo_file.filename != '':
+        compressed_logo = process_and_compress_image(logo_file)
+        if compressed_logo: 
+            site_controls['logo_image'] = compressed_logo
+    return redirect(url_for('admin'))
+
+@app.route('/update-controls', methods=['POST'])
+def update_controls():
+    global site_controls
+    site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
+    site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
+    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
+    site_controls['enable_socials'] = True if request.form.get('enable_socials') == 'on' else False
+    site_controls['enable_copyright'] = True if request.form.get('enable_copyright') == 'on' else False
+    site_controls['enable_reviews_page'] = True if request.form.get('enable_reviews_page') == 'on' else False
+    return redirect(url_for('admin'))
+
+@app.route('/update-texts', methods=['POST'])
+def update_texts():
+    global site_config, text_visibility
+    for key in site_config['texts']:
+        form_txt = request.form.get(f'txt_{key}')
+        if form_txt: site_config['texts'][key] = form_txt
+        text_visibility[key] = True if request.form.get(f'vis_{key}') == 'on' else False
+    return redirect(url_for('admin'))
+
+@app.route('/update-socials', methods=['POST'])
+def update_socials():
+    global site_controls
+    s1_name, s1_url = request.form.get('s1_name', '').strip(), request.form.get('s1_url', '').strip()
+    s2_name, s2_url = request.form.get('s2_name', '').strip(), request.form.get('s2_url', '').strip()
+    new_links = []
+    if s1_name and s1_url: new_links.append({"name": s1_name, "url": s1_url})
+    if s2_name and s2_url: new_links.append({"name": s2_name, "url": s2_url})
+    site_controls['social_links'] = new_links
+    return redirect(url_for('admin'))
+
+@app.route('/update-copyright', methods=['POST'])
+def update_copyright():
+    global site_controls
+    text = request.form.get('copyright_text', '').strip()
+    if text: site_controls['copyright_text'] = text
+    return redirect(url_for('admin'))
+
+@app.route('/update-password', methods=['POST'])
+def update_password():
+    global ADMIN_PASSWORD
+    new_pwd = request.form.get('new_password', '').strip()
+    if new_pwd: ADMIN_PASSWORD = new_pwd
+    return redirect(url_for('admin'))
+
+@app.route('/update-config', methods=['POST'])
+def update_config():
+    global site_config
+    site_config['title'] = request.form.get('title', site_config['title'])
+    site_config['subtitle'] = request.form.get('subtitle', site_config['subtitle'])
+    for key in site_config['colors']:
+        val = request.form.get(f'c_{key}')
+        if val: site_config['colors'][key] = val
+    if request.form.get('remove_bg_image') == 'on': site_config['bg_image'] = ""
+    bg_file = request.files.get('bg_image_file')
+    if bg_file and bg_file.filename != '':
+        compressed_bg = process_and_compress_image(bg_file)
+        if compressed_bg: site_config['bg_image'] = compressed_bg
+    return redirect(url_for('admin'))
+
+@app.route('/delete/<int:p_id>', methods=['POST'])
+def delete_product(p_id):
+    global products
+    products = [p for p in products if p['id'] != p_id]
+    return redirect(url_for('admin'))
+
+@app.route('/toggle-sold/<int:p_id>', methods=['POST'])
+def toggle_sold(p_id):
+    global products
+    for p in products:
+        if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
+    return redirect(url_for('admin'))
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
