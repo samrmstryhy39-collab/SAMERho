@@ -4,6 +4,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from datetime import datetime, timedelta
+import urllib.parse
 
 app = Flask(__name__)
 app.secret_key = 'samemomomo_secret_key'
@@ -32,6 +33,7 @@ site_controls = {
     "enable_cart": True,
     "use_logo_image": False,
     "logo_image": "",
+    "admin_whatsapp": "962790000000",  # رقم الواتساب الخاص بك لتلقي تفاصيل المزايدات
     "social_links": [
         {"name": "إنستغرام", "url": "#"},
         {"name": "تيليجرام", "url": "#"}
@@ -493,8 +495,10 @@ auction_detail_template = """
         {% if auction.max_price %}<div class="info"><span>الحد الأقصى (الشراء الفوري):</span><b style="color: #ff5252;">{{ auction.max_price }}</b></div>{% endif %}
         
         <form action="/bid/{{ auction.id }}" method="POST" style="margin-top: 20px;">
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">اسمك أو رقمك للتواصل:</label>
-            <input type="text" name="bidder_name" placeholder="اسمك الكريم" required>
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">اسمك الكريم:</label>
+            <input type="text" name="bidder_name" placeholder="أدخل اسمك" required>
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">رقم هاتفك للتواصل:</label>
+            <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك" required>
             <label style="display: block; margin-bottom: 5px; font-size: 13px;">قيمة السعر المقترح للمزايدة:</label>
             <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" required>
             <button type="submit">تثبيت المزايدة 🚀</button>
@@ -670,6 +674,15 @@ admin_template = """
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
             <div class="section-box">
+                <h3>📱 رقم الواتساب الخاص بك (لتلقي المزايدات)</h3>
+                <form action="/update-admin-whatsapp" method="POST">
+                    <label>رقم الواتساب (مع رمز الدولة بدون +):</label>
+                    <input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000" required>
+                    <button type="submit">حفظ رقم الواتساب</button>
+                </form>
+            </div>
+
+            <div class="section-box">
                 <h3>🔨 إدارة وإطلاق المزادات</h3>
                 <form action="/admin-add-auction" method="POST" enctype="multipart/form-data">
                     <label>عنوان المزاد (اسم القطعة):</label>
@@ -689,12 +702,17 @@ admin_template = """
                     <button type="submit" style="background: #d97706; margin-top: 10px;">إطلاق المزاد 🚀</button>
                 </form>
                 <div style="margin-top: 15px;">
-                    <h4 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">المزادات النشطة:</h4>
+                    <h4 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">المزادات النشطة (مع تفاصيل أرقام المزايدين):</h4>
                     {% if auctions|length == 0 %}<p style="color: #777; font-size: 12px; text-align: center;">لا توجد مزادات نشطة.</p>{% endif %}
                     {% for a in auctions %}
-                        <div class="product-row">
-                            <span><b>{{ a.title }}</b> ({{ a.current_price }})</span>
-                            <form action="/delete-auction/{{ a.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
+                        <div class="product-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
+                            <div style="display: flex; justify-content: space-between; width: 100%;">
+                                <span><b>{{ a.title }}</b> (السعر الحالي: {{ a.current_price }})</span>
+                                <form action="/delete-auction/{{ a.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
+                            </div>
+                            {% if a.last_bidder_phone %}
+                                <span style="font-size: 11px; color: #25d366;">آخر مزايد: {{ a.last_bidder_name }} | الهاتف: {{ a.last_bidder_phone }}</span>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>
@@ -910,17 +928,39 @@ def remove_from_cart(cart_id):
 def auction_detail(a_id):
     auction = next((a for a in auctions if a['id'] == a_id), None)
     if not auction: return redirect(url_for('index'))
-    return render_template_string(auction_detail_template, auction=auction, config=site_config)
+    return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls)
 
 @app.route('/bid/<int:a_id>', methods=['POST'])
 def place_bid(a_id):
     global auctions
     bidder_name = request.form.get('bidder_name', '').strip()
+    bidder_phone = request.form.get('bidder_phone', '').strip()
     bid_amount = request.form.get('bid_amount', '').strip()
-    for a in auctions:
-        if a['id'] == a_id and bid_amount:
-            a['current_price'] = f"{bid_amount} (بواسطة: {bidder_name})"
+    
+    auction = next((a for a in auctions if a['id'] == a_id), None)
+    if auction and bid_amount and bidder_name:
+        auction['current_price'] = f"{bid_amount} (بواسطة: {bidder_name})"
+        auction['last_bidder_name'] = bidder_name
+        auction['last_bidder_phone'] = bidder_phone
+        
+        # تجهيز رسالة الواتساب المباشرة لك
+        msg = f"مرحباً سامر، لدي مزايدة جديدة على القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
+        encoded_msg = urllib.parse.quote(msg)
+        whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
+        whatsapp_url = f"https://wa.me/{whatsapp_number}?text={encoded_msg}"
+        
+        # إعادة توجيه الزبون مباشرة إلى صفحة الواتساب الخاصة بك
+        return redirect(whatsapp_url)
+        
     return redirect(url_for('auction_detail', a_id=a_id))
+
+@app.route('/update-admin-whatsapp', methods=['POST'])
+def update_admin_whatsapp():
+    global site_controls
+    whatsapp = request.form.get('admin_whatsapp', '').strip()
+    if whatsapp:
+        site_controls['admin_whatsapp'] = whatsapp
+    return redirect(url_for('admin'))
 
 @app.route('/admin-add-auction', methods=['POST'])
 def admin_add_auction():
@@ -943,7 +983,9 @@ def admin_add_auction():
             "min_bid": min_bid,
             "max_price": max_price,
             "end_time": end_time.isoformat(),
-            "images": [img for img in images_list if img]
+            "images": [img for img in images_list if img],
+            "last_bidder_name": "",
+            "last_bidder_phone": ""
         }
         auctions.insert(0, auction_data)
         auction_id_counter += 1
