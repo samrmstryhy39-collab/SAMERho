@@ -787,7 +787,8 @@ def update_logo():
     logo_file = request.files.get('logo_file')
     if logo_file and logo_file.filename != '':
         compressed_logo = process_and_compress_image(logo_file)
-        if compressed_logo: site_controls['logo_image'] = compressed_logo
+        if compressed_logo: 
+            site_controls['logo_image'] = compressed_logo
     return redirect(url_for('admin'))
 
 @app.route('/update-controls', methods=['POST'])
@@ -795,4 +796,4 @@ def update_controls():
     global site_controls
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_contact_btn'] =
+    site_controls['enable_co
