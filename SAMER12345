@@ -138,9 +138,8 @@ default_html_template = """
         body { background-color: {{ config.colors.bg_color }}; {% if config.bg_image %}background-image: url('{{ config.bg_image }}'); background-size: cover; background-position: center; background-attachment: fixed; {% endif %} font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
         {% if config.bg_image %}body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: -1; }{% endif %}
         
-        /* تصميم القائمة المنسدلة للإعدادات */
         .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; margin-bottom: 15px; position: relative; }
-        .dropdown { position: display: inline-block; }
+        .dropdown { position: relative; display: inline-block; }
         .settings-btn { background: #1e1e1e; border: 1px solid #444; padding: 8px 16px; border-radius: 8px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-block; }
         .dropdown-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 170px; box-shadow: 0px 8px 16px rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 8px; z-index: 10; overflow: hidden; margin-top: 5px; }
         .dropdown-content a { color: #fff; padding: 10px 14px; text-decoration: none; display: block; font-size: 13px; text-align: right; border-bottom: 1px solid #222; }
@@ -271,15 +270,12 @@ default_html_template = """
     </div>
     {% endif %}
 
-    {% if controls.enable_socials or controls.enable_copyright or controls.enable_reviews_page %}
+    {% if controls.enable_socials or controls.enable_copyright %}
     <footer class="site-footer">
         {% if controls.enable_socials and controls.social_links|length > 0 %}
         <div class="footer-socials">{% for s in controls.social_links %}<a href="{{ s.url }}" target="_blank" class="footer-social-link">{{ s.name }}</a>{% endfor %}</div>
         {% endif %}
-        <div style="display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap;">
-            {% if controls.enable_reviews_page %}<a href="/reviews" class="footer-social-link" style="border-color: #25d366; color: #25d366;">⭐ آراء العملاء</a>{% endif %}
-            {% if controls.enable_copyright %}<a href="/copyright" class="footer-copyright" style="margin: 0;">حقوق النشر والشروط</a>{% endif %}
-        </div>
+        {% if controls.enable_copyright %}<a href="/copyright" class="footer-copyright">حقوق النشر والشروط</a>{% endif %}
     </footer>
     {% endif %}
     <script>
