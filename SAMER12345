@@ -103,8 +103,8 @@ site_config = {
         "search_placeholder": "🔍 ابحث عن عنصر أو منتج...",
         "contact_word": "تواصل",
         "bid_name_label": "اسمك الكريم:",
-        "bid_phone_label": "رقم هاتفك للتواصل (7 أرقام على الأقل):",
-        "bid_amount_label": "قيمة السعر المقترح للمزايدة (أرقام فقط):",
+        "bid_phone_label": "رقم هاتفك للتواصل:",
+        "bid_amount_label": "قيمة السعر المقترح للمزايدة:",
         "bid_submit_btn": "تثبيت المزايدة 🚀"
     },
     "colors": {
@@ -511,10 +511,10 @@ auction_detail_template = """
             <input type="text" name="bidder_name" placeholder="أدخل اسمك" required>
             
             {% if vis.bid_phone_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_phone_label }}</label>{% endif %}
-            <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك (أرقام فقط)" required>
+            <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك" required>
             
             {% if vis.bid_amount_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_amount_label }}</label>{% endif %}
-            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة (أرقام فقط)" required>
+            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" required>
             
             <button type="submit">{{ config.texts.bid_submit_btn }}</button>
         </form>
