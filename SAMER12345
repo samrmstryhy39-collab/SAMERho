@@ -18,8 +18,8 @@ site_controls = {
     "enable_socials": True,       
     "enable_copyright": True,
     "enable_contact_btn": True,
-    "use_logo_image": False,      # تفعيل صورة الشعار أو النص
-    "logo_image": "",             # مسار/بيانات صورة الشعار
+    "use_logo_image": False,
+    "logo_image": "",
     "social_links": [
         {"name": "إنستغرام", "url": "#"},
         {"name": "تيليجرام", "url": "#"}
@@ -1195,4 +1195,6 @@ def admin():
 @app.route('/update-logo', methods=['POST'])
 def update_logo():
     global site_controls
-    site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else
+    site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
+    logo_file = request.files.get('logo_file')
+    if logo_file 
