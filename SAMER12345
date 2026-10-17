@@ -765,8 +765,12 @@ admin_template = """
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
-            <div class="section-box">
-                <h3>📱 رقم الواتساب الخاص بك (لتلقي الطلبات والمزادات)</h3>
+            <!-- 1. قائمة منسدلة: رقم الواتساب -->
+            <div class="collapsible-header" onclick="toggleSection('sec_wa')">
+                <span>📱 رقم الواتساب الخاص بك (لتلقي الطلبات والمزادات)</span>
+                <span id="icon-sec_wa">▼</span>
+            </div>
+            <div id="sec_wa" class="collapsible-content">
                 <form action="/update-admin-whatsapp" method="POST">
                     <label>رقم الواتساب (مع رمز الدولة بدون +):</label>
                     <input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000" required>
@@ -774,7 +778,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 1. قائمة منسدلة: إدارة الخصائص والميزات العامة -->
+            <!-- 2. قائمة منسدلة: إدارة الخصائص والميزات العامة -->
             <div class="collapsible-header" onclick="toggleSection('sec1')">
                 <span>⚙️ إدارة الخصائص والميزات العامة</span>
                 <span id="icon-sec1">▼</span>
@@ -793,7 +797,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 2. قائمة منسدلة: إدارة النصوص والظهور -->
+            <!-- 3. قائمة منسدلة: إدارة النصوص والظهور -->
             <div class="collapsible-header" onclick="toggleSection('sec2')">
                 <span>📝 إدارة النصوص والظهور</span>
                 <span id="icon-sec2">▼</span>
@@ -812,7 +816,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 3. قائمة منسدلة: تعديل الألوان والتصميم وخلفية الموقع -->
+            <!-- 4. قائمة منسدلة: تعديل الألوان والتصميم وخلفية الموقع -->
             <div class="collapsible-header" onclick="toggleSection('sec3')">
                 <span>🎨 تعديل الألوان والتصميم وخلفية الموقع</span>
                 <span id="icon-sec3">▼</span>
@@ -832,8 +836,12 @@ admin_template = """
                 </form>
             </div>
 
-            <div class="section-box">
-                <h3>🔨 إدارة وإطلاق المزادات</h3>
+            <!-- 5. قائمة منسدلة: إدارة وإطلاق المزادات -->
+            <div class="collapsible-header" onclick="toggleSection('sec_auctions')">
+                <span>🔨 إدارة وإطلاق المزادات</span>
+                <span id="icon-sec_auctions">▼</span>
+            </div>
+            <div id="sec_auctions" class="collapsible-content">
                 <form action="/admin-add-auction" method="POST" enctype="multipart/form-data">
                     <label>عنوان المزاد (اسم القطعة):</label>
                     <input type="text" name="title" placeholder="مثال: ساعة فاخرة نادرة" required>
@@ -868,16 +876,24 @@ admin_template = """
                 </div>
             </div>
 
-            <div class="section-box">
-                <h3>💻 محرر الكود الداخلي</h3>
+            <!-- 6. قائمة منسدلة: محرر الكود الداخلي -->
+            <div class="collapsible-header" onclick="toggleSection('sec_code')">
+                <span>💻 محرر الكود الداخلي</span>
+                <span id="icon-sec_code">▼</span>
+            </div>
+            <div id="sec_code" class="collapsible-content">
                 <form action="/update-code" method="POST">
                     <textarea name="custom_html" rows="10" style="font-family: monospace; font-size: 11px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
                     <button type="submit">حفظ وتحديث كود الواجهة</button>
                 </form>
             </div>
 
-            <div class="section-box">
-                <h3>⭐ إدارة وحذف آراء العملاء</h3>
+            <!-- 7. قائمة منسدلة: إدارة وحذف آراء العملاء -->
+            <div class="collapsible-header" onclick="toggleSection('sec_reviews')">
+                <span>⭐ إدارة وحذف آراء العملاء</span>
+                <span id="icon-sec_reviews">▼</span>
+            </div>
+            <div id="sec_reviews" class="collapsible-content">
                 {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 10px; font-size: 12px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
                 {% for r in reviews %}
                     <div class="product-row">
@@ -887,8 +903,12 @@ admin_template = """
                 {% endfor %}
             </div>
 
-            <div class="section-box">
-                <h3>💡 مفكرة الأفكار والملاحظات</h3>
+            <!-- 8. قائمة منسدلة: مفكرة الأفكار والملاحظات -->
+            <div class="collapsible-header" onclick="toggleSection('sec_notes')">
+                <span>💡 مفكرة الأفكار والملاحظات</span>
+                <span id="icon-sec_notes">▼</span>
+            </div>
+            <div id="sec_notes" class="collapsible-content">
                 <form action="/add-note" method="POST" enctype="multipart/form-data">
                     <label>عنوان الفكرة أو الملاحظة:</label><input type="text" name="note_title" required>
                     <label>تفاصيل الفكرة:</label><textarea name="note_content" rows="4" required></textarea>
@@ -908,8 +928,12 @@ admin_template = """
                 </div>
             </div>
 
-            <div class="section-box">
-                <h3>🖼️ إدارة شعار الموقع</h3>
+            <!-- 9. قائمة منسدلة: إدارة شعار الموقع -->
+            <div class="collapsible-header" onclick="toggleSection('sec_logo')">
+                <span>🖼️ إدارة شعار الموقع</span>
+                <span id="icon-sec_logo">▼</span>
+            </div>
+            <div id="sec_logo" class="collapsible-content">
                 <form action="/update-logo" method="POST" enctype="multipart/form-data">
                     <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار</label>
                     <input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
@@ -917,6 +941,7 @@ admin_template = """
                 </form>
             </div>
 
+            <!-- هذا القسم (إضافة منتج جديد) تركناه ظاهراً مباشرة بدون قائمة منسدلة كما طلبت -->
             <div class="section-box">
                 <h3>➕ إضافة منتج جديد</h3>
                 <form action="/admin-add-product" method="POST" enctype="multipart/form-data">
@@ -929,8 +954,12 @@ admin_template = """
                 </form>
             </div>
 
-            <div class="section-box">
-                <h3>قائمة المنتجات الحالية</h3>
+            <!-- 10. قائمة منسدلة: قائمة المنتجات الحالية -->
+            <div class="collapsible-header" onclick="toggleSection('sec_products')">
+                <span>📦 قائمة المنتجات الحالية</span>
+                <span id="icon-sec_products">▼</span>
+            </div>
+            <div id="sec_products" class="collapsible-content">
                 {% for p in products %}
                     <div class="product-row">
                         <span><b>{{ p.title }}</b> ({{ p.price }})</span>
