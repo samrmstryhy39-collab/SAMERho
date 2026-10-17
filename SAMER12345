@@ -144,17 +144,15 @@ default_html_template = """
         body { background-color: {{ config.colors.bg_color }}; {% if config.bg_image %}background-image: url('{{ config.bg_image }}'); background-size: cover; background-position: center; background-attachment: fixed; {% endif %} font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
         {% if config.bg_image %}body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: -1; }{% endif %}
         
-        .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; position: relative; }
-        .cart-icon-btn { background: #1e1e1e; border: 1px solid #444; padding: 8px 14px; border-radius: 8px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
-        .cart-count { background: #dc2626; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; }
-
+        .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; position: relative; }
         .dropdown { position: relative; display: inline-block; }
         .settings-btn { background: #1e1e1e; border: 1px solid #444; padding: 8px 16px; border-radius: 8px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-block; }
-        .dropdown-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 170px; box-shadow: 0px 8px 16px rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 8px; z-index: 10; overflow: hidden; margin-top: 5px; }
-        .dropdown-content a { color: #fff; padding: 10px 14px; text-decoration: none; display: block; font-size: 13px; text-align: right; border-bottom: 1px solid #222; }
+        .dropdown-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 190px; box-shadow: 0px 8px 16px rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 8px; z-index: 10; overflow: hidden; margin-top: 5px; }
+        .dropdown-content a { color: #fff; padding: 10px 14px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; font-size: 13px; text-align: right; border-bottom: 1px solid #222; }
         .dropdown-content a:last-child { border-bottom: none; }
         .dropdown-content a:hover { background-color: #222; color: #25d366; }
         .show { display: block; }
+        .cart-badge { background: #dc2626; color: white; border-radius: 50%; padding: 2px 6px; font-size: 11px; font-weight: bold; }
 
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
@@ -188,7 +186,6 @@ default_html_template = """
         .add-to-cart-btn { background: #dc2626; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; }
         .sold-btn-disabled { background: #555 !important; }
 
-        /* شريط أرقام الصفحات */
         .pagination { display: flex; justify-content: center; gap: 8px; margin: 30px 0 15px 0; flex-wrap: wrap; }
         .page-link { background: #111; border: 1px solid #333; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
         .page-link.active { background: #25d366; border-color: #25d366; color: #000; }
@@ -213,14 +210,12 @@ default_html_template = """
 </head>
 <body>
     <div class="top-bar">
-        {% if controls.enable_cart %}
-        <a href="/cart" class="cart-icon-btn">
-            🛒 سلة المشتريات <span class="cart-count">{{ cart_count }}</span>
-        </a>
-        {% else %}<div></div>{% endif %}
         <div class="dropdown">
             <button onclick="toggleDropdown()" class="settings-btn">⚙️ الإعدادات ▼</button>
             <div id="settingsDropdown" class="dropdown-content">
+                {% if controls.enable_cart %}
+                    <a href="/cart">🛒 سلة المشتريات <span class="cart-badge">{{ cart_count }}</span></a>
+                {% endif %}
                 {% if controls.enable_reviews_page %}<a href="/reviews">⭐ آراء العملاء</a>{% endif %}
                 {% if controls.enable_copyright %}<a href="/copyright">📄 حقوق النشر والشروط</a>{% endif %}
                 <a href="/admin" style="color: #25d366; font-weight: bold;">🔐 لوحة التحكم</a>
@@ -287,7 +282,6 @@ default_html_template = """
             {% endfor %}
         </div>
 
-        <!-- شريط أرقام الصفحات (كل 30 منشور) -->
         {% if total_pages > 1 %}
         <div class="pagination">
             {% for p_num in range(1, total_pages + 1) %}
@@ -827,7 +821,6 @@ def index():
     global current_html_template
     cart = get_cart()
     
-    # حساب تقسيم الصفحات (30 منتج بكل صفحة)
     per_page = 30
     try:
         page = int(request.args.get('page', 1))
