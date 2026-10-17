@@ -511,10 +511,10 @@ auction_detail_template = """
             <input type="text" name="bidder_name" placeholder="أدخل اسمك" required>
             
             {% if vis.bid_phone_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_phone_label }}</label>{% endif %}
-            <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك" required>
+            <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
             
             {% if vis.bid_amount_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_amount_label }}</label>{% endif %}
-            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" required>
+            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
             
             <button type="submit">{{ config.texts.bid_submit_btn }}</button>
         </form>
@@ -955,8 +955,11 @@ def place_bid(a_id):
     auction = next((a for a in auctions if a['id'] == a_id), None)
     if not auction: return redirect(url_for('index'))
 
-    # التحقق من شروط الهاتف (أرقام فقط وأقل شي 7 أرقام)
-    if not bidder_phone.isdigit() or len(bidder_phone) < 7:
+    # إزالة المسافات من رقم الهاتف للفحص الصحيح
+    clean_phone = bidder_phone.replace(" ", "")
+
+    # التحقق من شروط الهاتف (أرقام فقط بدون مسافات وأقل شي 7 أرقام)
+    if not clean_phone.isdigit() or len(clean_phone) < 7:
         return render_template_string(
             auction_detail_template, 
             auction=auction, 
