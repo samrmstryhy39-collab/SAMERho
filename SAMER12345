@@ -100,7 +100,6 @@ site_config = {
     }
 }
 
-# خريطة الترجمة لعرض الأسماء العربية في لوحة التحكم بدلاً من الإنجليزية
 color_names_ar = {
     "bg_color": "لون خلفية الموقع العامة",
     "title": "لون عنوان الموقع الرئيسي",
@@ -120,7 +119,8 @@ color_names_ar = {
     "submit_btn": "لون زر نشر المنتج"
 }
 
-html_template = """
+# قوالب HTML الافتراضية
+default_html_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -338,6 +338,9 @@ copyright_template = """
 </html>
 """
 
+# تخزين القوالب في متغيرات عامة
+current_html_template = default_html_template
+
 admin_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -379,6 +382,15 @@ admin_template = """
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
+            <div class="section-box">
+                <h3>💻 محرر الكود الداخلي (لتعديل واجهة المتجر مباشرة)</h3>
+                <form action="/update-code" method="POST">
+                    <label>كود HTML / CSS للواجهة الرئيسية:</label>
+                    <textarea name="custom_html" rows="10" style="font-family: monospace; font-size: 11px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
+                    <button type="submit">حفظ وتحديث كود الواجهة</button>
+                </form>
+            </div>
+
             <div class="section-box">
                 <h3>🖼️ إدارة شعار الموقع (صورة أو نص)</h3>
                 <form action="/update-logo" method="POST" enctype="multipart/form-data">
@@ -538,7 +550,8 @@ def process_and_compress_image(image_file):
 
 @app.route('/')
 def index():
-    return render_template_string(html_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+    global current_html_template
+    return render_template_string(current_html_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, error=None)
 
 @app.route('/product/<int:p_id>')
 def product_detail(p_id):
@@ -550,6 +563,14 @@ def product_detail(p_id):
 def copyright_page():
     if not site_controls['enable_copyright']: return redirect(url_for('index'))
     return render_template_string(copyright_template, text=site_controls['copyright_text'])
+
+@app.route('/update-code', methods=['POST'])
+def update_code():
+    global current_html_template
+    new_code = request.form.get('custom_html', '').strip()
+    if new_code:
+        current_html_template = new_code
+    return redirect(url_for('admin'))
 
 @app.route('/add', methods=['POST'])
 def add_product():
@@ -586,13 +607,13 @@ def admin_add_product():
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    global ADMIN_PASSWORD
+    global ADMIN_PASSWORD, current_html_template
     authorized = False
     error = False
     if request.method == 'POST':
         if request.form.get('password') == ADMIN_PASSWORD: authorized = True
         else: error = True
-    return render_template_string(admin_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error)
+    return render_template_string(admin_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
 
 @app.route('/update-logo', methods=['POST'])
 def update_logo():
