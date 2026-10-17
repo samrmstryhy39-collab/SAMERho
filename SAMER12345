@@ -168,7 +168,6 @@ default_html_template = """
         .submit-btn { background-color: {{ config.colors.submit_btn }}; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 10px; border-radius: 8px; text-align: center; font-size: 13px; margin-bottom: 15px; }
         
-        /* قسم آراء العملاء في الرئيسية */
         .reviews-section { width: 100%; max-width: 900px; margin-top: 30px; background: #111; border: 1px solid #222; border-radius: 12px; padding: 20px; box-sizing: border-box; }
         .reviews-title { color: #ff5252; text-align: center; margin-bottom: 20px; font-size: 18px; }
         .review-card { background: #000; padding: 12px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; }
@@ -260,7 +259,6 @@ default_html_template = """
     </div>
     {% endif %}
 
-    <!-- قسم آراء العملاء في الرئيسية -->
     <div class="reviews-section">
         <h3 class="reviews-title">⭐ آراء العملاء</h3>
         {% for r in reviews %}
@@ -441,7 +439,6 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- قسم إدارة آراء العملاء تحت لوحة التحكم مباشرة -->
             <div class="section-box">
                 <h3>⭐ إدارة وعرض آراء العملاء</h3>
                 {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 10px; font-size: 12px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
@@ -796,4 +793,5 @@ def update_controls():
     global site_controls
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_co
+    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
+    site_controls['enable_socials'] = True if request.form.get('enable_s
