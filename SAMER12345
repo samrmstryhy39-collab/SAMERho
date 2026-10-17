@@ -3,120 +3,141 @@ import os
 import base64
 from io import BytesIO
 from PIL import Image
+import sqlite3
 
 app = Flask(__name__)
 
-products = []
-product_id_counter = 1
 ADMIN_PASSWORD = "samemomomo**1"
+DB_NAME = "database.db"
 
-site_controls = {
-    "block_posting": False,  
-    "enable_search": True,
-    "enable_socials": True,       
-    "enable_copyright": True,
-    "enable_contact_btn": True,   
-    "use_logo_image": False,
-    "logo_image": "",
-    "social_links": [
-        {"name": "إنستغرام", "url": "#"},
-        {"name": "تيليجرام", "url": "#"}
-    ],
-    "copyright_text": "جميع الحقوق محفوظة © عتيق 2026. تم تصميم وتطوير المنصة بعناية فائقة."
-}
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    
+    # جدول المنتجات والمزادات
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT,
+            price TEXT,
+            quantity TEXT,
+            description TEXT,
+            is_auction INTEGER,
+            current_bid TEXT,
+            max_price TEXT,
+            auction_end TEXT,
+            contact_type TEXT,
+            contact_value TEXT,
+            images TEXT,
+            is_sold INTEGER
+        )
+    ''')
+    
+    # جدول الإعدادات العامة والمتغيرات
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-text_visibility = {
-    "heading_products": True,
-    "no_products": True,
-    "toggle_btn_open": True,
-    "toggle_btn_close": True,
-    "form_main_title": True,
-    "label_title": True,
-    "input_title_placeholder": True,
-    "label_price": True,
-    "input_price_placeholder": True,
-    "label_quantity": True,
-    "input_quantity_placeholder": True,
-    "label_description": True,
-    "input_description_placeholder": True,
-    "label_contact_method": True,
-    "contact_type_instagram": True,
-    "contact_type_phone": True,
-    "input_contact_placeholder": True,
-    "upload_text": True,
-    "submit_btn": True,
-    "back_home": True,
-    "view_details": True,
-    "search_placeholder": True,
-    "contact_word": True
-}
+init_db()
 
-site_config = {
-    "title": "عتيق | Atiq",
-    "subtitle": "لكل قطعة حكاية",
-    "bg_image": "",
-    "texts": {
-        "heading_products": "المنتجات المعروضة",
-        "no_products": "لا توجد منتجات معروضة حالياً.",
-        "toggle_btn_open": "➕ إضافة منتج",
-        "toggle_btn_close": "✖ إغلاق القائمة",
-        "form_main_title": "أضف منتجاً جديداً للبيع",
-        "label_title": "اسم المنتج",
-        "input_title_placeholder": "أدخل اسم المنتج",
-        "label_price": "السعر",
-        "input_price_placeholder": "أدخل السعر",
-        "label_quantity": "الكمية المتوفرة",
-        "input_quantity_placeholder": "أدخل الكمية (مثال: 1)",
-        "label_description": "نبذة أو قصة عن المنتج",
-        "input_description_placeholder": "اكتب قصة هذه القطعة أو نبذة عنها...",
-        "label_contact_method": "طريقة التواصل",
-        "contact_type_instagram": "حساب Instagram",
-        "contact_type_phone": "الرقم الخاص بي",
-        "input_contact_placeholder": "أدخل حساب الانستغرام أو الرقم",
-        "upload_text": "اضغط هنا لاختيار صور المنتج 📸",
-        "submit_btn": "نشر المنتج",
-        "back_home": "← العودة إلى المتجر الرئيسي",
-        "view_details": "عرض التفاصيل",
-        "search_placeholder": "🔍 ابحث عن عنصر أو منتج...",
-        "contact_word": "تواصل"
-    },
-    "colors": {
-        "bg_color": "#000000",             
-        "title": "#ff5252",                
-        "subtitle": "#aaaaaa",             
-        "logo_bg": "#000000",              
-        "logo_border": "#ffffff",          
-        "products_heading": "#ffffff",     
-        "no_products": "#777777",          
-        "product_bg": "#111111",           
-        "product_title": "#ffffff",        
-        "product_price": "#25d366",        
-        "whatsapp_btn": "#25d366",         
-        "toggle_btn": "#25d366",           
-        "form_main_title": "#ffffff",      
-        "label_title": "#cccccc",          
-        "upload_text": "#ffffff",          
-        "submit_btn": "#25d366"            
-    }
-}
+def get_db_connection():
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+# تهيئة الإعدادات الافتراضية في قاعدة البيانات إذا كانت فارغة
+def load_settings():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # التحقق من وجود الإعدادات
+    cursor.execute("SELECT * FROM settings WHERE key='site_config'")
+    if not cursor.fetchone():
+        import json
+        default_controls = {
+            "block_posting": False, "enable_search": True, "enable_socials": True,
+            "enable_copyright": True, "enable_contact_btn": True, "use_logo_image": False,
+            "logo_image": "", "social_links": [{"name": "إنستغرام", "url": "#"}, {"name": "تيليجرام", "url": "#"}],
+            "copyright_text": "جميع الحقوق محفوظة © عتيق 2026. تم تصميم وتطوير المنصة بعناية فائقة."
+        }
+        default_visibility = {
+            "heading_products": True, "no_products": True, "toggle_btn_open": True, "toggle_btn_close": True,
+            "form_main_title": True, "label_title": True, "input_title_placeholder": True, "label_price": True,
+            "input_price_placeholder": True, "label_quantity": True, "input_quantity_placeholder": True,
+            "label_description": True, "input_description_placeholder": True, "label_contact_method": True,
+            "contact_type_instagram": True, "contact_type_phone": True, "input_contact_placeholder": True,
+            "upload_text": True, "submit_btn": True, "back_home": True, "view_details": True,
+            "search_placeholder": True, "contact_word": True
+        }
+        default_config = {
+            "title": "عتيق | Atiq", "subtitle": "لكل قطعة حكاية", "bg_image": "",
+            "texts": {
+                "heading_products": "المنتجات والمزادات المعروضة", "no_products": "لا توجد منتجات أو مزادات معروضة حالياً.",
+                "toggle_btn_open": "➕ إضافة منتج / مزاد", "toggle_btn_close": "✖ إغلاق القائمة",
+                "form_main_title": "أضف منتجاً أو مزاداً جديداً", "label_title": "اسم القطعة أو المنتج",
+                "input_title_placeholder": "أدخل اسم القطعة", "label_price": "السعر (أو السعر الابتدائي للمزاد)",
+                "input_price_placeholder": "أدخل السعر", "label_quantity": "الكمية المتوفرة",
+                "input_quantity_placeholder": "أدخل الكمية (مثال: 1)", "label_description": "نبذة أو قصة عن القطعة",
+                "input_description_placeholder": "اكتب قصة هذه القطعة أو تفاصيلها...", "label_contact_method": "طريقة التواصل",
+                "contact_type_instagram": "حساب Instagram", "contact_type_phone": "الرقم الخاص بي",
+                "input_contact_placeholder": "أدخل حساب الانستغرام أو الرقم", "upload_text": "اضغط هنا لاختيار صور القطعة 📸",
+                "submit_btn": "نشر العرض", "back_home": "← العودة إلى المتجر الرئيسي", "view_details": "عرض التفاصيل",
+                "search_placeholder": "🔍 ابحث عن عنصر أو مزاد...", "contact_word": "تواصل"
+            },
+            "colors": {
+                "bg_color": "#000000", "title": "#ff5252", "subtitle": "#aaaaaa", "logo_bg": "#000000",
+                "logo_border": "#ffffff", "products_heading": "#ffffff", "no_products": "#777777",
+                "product_bg": "#111111", "product_title": "#ffffff", "product_price": "#25d366",
+                "whatsapp_btn": "#25d366", "toggle_btn": "#25d366", "form_main_title": "#ffffff",
+                "label_title": "#cccccc", "upload_text": "#ffffff", "submit_btn": "#25d366"
+            }
+        }
+        default_template = default_html_template
+        
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('controls', ?)", (json.dumps(default_controls),))
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('visibility', ?)", (json.dumps(default_visibility),))
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('config', ?)", (json.dumps(default_config),))
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('template', ?)", (default_template,))
+        cursor.execute("INSERT INTO settings (key, value) VALUES ('admin_pwd', ?)", (ADMIN_PASSWORD,))
+        conn.commit()
+    conn.close()
+
+load_settings()
+
+def get_setting(key):
+    import json
+    conn = get_db_connection()
+    row = conn.execute("SELECT value FROM settings WHERE key = ?", (key,)).fetchone()
+    conn.close()
+    if not row: return None
+    val = row['value']
+    if key in ['controls', 'visibility', 'config']:
+        return json.loads(val)
+    return val
+
+def save_setting(key, value):
+    import json
+    conn = get_db_connection()
+    if key in ['controls', 'visibility', 'config']:
+        value = json.dumps(value)
+    conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+    conn.commit()
+    conn.close()
 
 color_names_ar = {
-    "bg_color": "لون خلفية الموقع العامة",
-    "title": "لون عنوان الموقع الرئيسي",
-    "logo_bg": "لون خلفية مربع الشعار",
-    "logo_border": "لون إطار وتوهج مربع الشعار",
-    "subtitle": "لون وصف/شعار الموقع الفرعي",
-    "products_heading": "لون عنوان قسم المنتجات المعروضة",
-    "no_products": "لون جملة عدم وجود منتجات",
-    "product_bg": "لون خلفية بطاقة/مربع المنتج",
-    "product_title": "لون عنوان المنتج",
-    "product_price": "لون سعر المنتج والكمية",
-    "whatsapp_btn": "لون زر التفاصيل / التواصل",
-    "toggle_btn": "لون زر فتح وإغلاق قائمة الإضافة",
-    "form_main_title": "لون عنوان نموذج الإضافة",
-    "label_title": "لون عناوين الحقول (Labels)",
-    "upload_text": "لون نص اختيار الصور",
-    "submit_btn": "لون زر نشر المنتج"
+    "bg_color": "لون خلفية الموقع العامة", "title": "لون عنوان الموقع الرئيسي",
+    "logo_bg": "لون خلفية مربع الشعار", "logo_border": "لون إطار وتوهج مربع الشعار",
+    "subtitle": "لون وصف/شعار الموقع الفرعي", "products_heading": "لون عنوان قسم المنتجات",
+    "no_products": "لون جملة عدم وجود منتجات", "product_bg": "لون خلفية بطاقة المنتج",
+    "product_title": "لون عنوان المنتج", "product_price": "لون السعر",
+    "whatsapp_btn": "لون زر التواصل", "toggle_btn": "لون زر فتح القائمة",
+    "form_main_title": "لون عنوان النموذج", "label_title": "لون عناوين الحقول",
+    "upload_text": "لون نص رفع الصور", "submit_btn": "لون زر النشر"
 }
 
 default_html_template = """
@@ -143,6 +164,7 @@ default_html_template = """
         .product-card { background: {{ config.colors.product_bg }}; border: 1px solid #222222; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; position: relative; }
         .product-card.sold-card { opacity: 0.65; }
         .sold-badge { position: absolute; top: 10px; right: 10px; background: #dc2626; color: white; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; z-index: 2; }
+        .auction-badge { position: absolute; top: 10px; left: 10px; background: #d97706; color: white; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; z-index: 2; }
         .product-images { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; background: #000; padding: 8px; width: 100%; box-sizing: border-box; }
         .product-images img { width: 100%; height: 140px; object-fit: cover; border-radius: 6px; flex: 0 0 100%; }
         .product-info { padding: 12px; }
@@ -186,13 +208,20 @@ default_html_template = """
             {% for p in products %}
                 <div class="product-card {% if p.is_sold %}sold-card{% endif %}" data-title="{{ p.title }}">
                     {% if p.is_sold %}<div class="sold-badge">تم البيع</div>{% endif %}
+                    {% if p.is_auction %}<div class="auction-badge">🔥 مزاد</div>{% endif %}
                     <div class="product-images">{% for img in p.images %}<img src="{{ img }}" alt="صورة">{% endfor %}</div>
                     <div class="product-info">
                         <div class="product-title" title="{{ p.title }}">{{ p.title }}</div>
-                        <div class="product-price">{{ p.price }} {% if p.quantity %} | الكمية: {{ p.quantity }}{% endif %}</div>
+                        <div class="product-price">
+                            {% if p.is_auction %}
+                                السعر الحالي: {{ p.current_bid }}
+                            {% else %}
+                                {{ p.price }} {% if p.quantity %} | الكمية: {{ p.quantity }}{% endif %}
+                            {% endif %}
+                        </div>
                         {% if vis.view_details %}
                             <a href="/product/{{ p.id }}" class="contact-btn {% if p.is_sold %}sold-btn-disabled{% endif %}">
-                                {% if p.is_sold %}تم البيع (عرض الصور){% else %}{{ config.texts.view_details }}{% endif %}
+                                {% if p.is_sold %}تم البيع (عرض التفاصيل){% else %}{{ config.texts.view_details }}{% endif %}
                             </a>
                         {% endif %}
                     </div>
@@ -207,16 +236,33 @@ default_html_template = """
         {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
         <form action="/add" method="POST" enctype="multipart/form-data">
             <div class="input-group">
+                <label style="color: {{ config.colors.label_title }};">نوع العرض:</label>
+                <select name="is_auction" onchange="toggleAuctionFields(this.value)">
+                    <option value="0">منتج عادي (بيع مباشر)</option>
+                    <option value="1">مزاد علني</option>
+                </select>
+            </div>
+            <div class="input-group">
                 {% if vis.label_title %}<label style="color: {{ config.colors.label_title }};">{{ config.texts.label_title }}</label>{% endif %}
                 <input type="text" name="title" {% if vis.input_title_placeholder %}placeholder="{{ config.texts.input_title_placeholder }}"{% endif %} required>
             </div>
-            {% if vis.label_price or vis.input_price_placeholder %}
             <div class="input-group">
-                {% if vis.label_price %}<label style="color: {{ config.colors.label_title }};">{{ config.texts.label_price }}</label>{% endif %}
+                {% if vis.label_price %}<label style="color: {{ config.colors.label_title }};" id="priceLabel">{{ config.texts.label_price }}</label>{% endif %}
                 <input type="text" name="price" {% if vis.input_price_placeholder %}placeholder="{{ config.texts.input_price_placeholder }}"{% endif %}>
             </div>
-            {% endif %}
-            <div class="input-group">
+            
+            <div id="auctionFields" style="display: none;">
+                <div class="input-group">
+                    <label style="color: {{ config.colors.label_title }};">السعر الأقصى / الشراء الفوري (اختياري):</label>
+                    <input type="text" name="max_price" placeholder="مثال: 100 دينار">
+                </div>
+                <div class="input-group">
+                    <label style="color: {{ config.colors.label_title }};">مدة ونهاية المزاد:</label>
+                    <input type="datetime-local" name="auction_end" style="width: 100%; padding: 12px; border: 1px solid #333; border-radius: 8px; background: #000; color: white; font-size: 14px; box-sizing: border-box; outline: none; margin-bottom: 8px;">
+                </div>
+            </div>
+
+            <div class="input-group" id="qtyGroup">
                 <label style="color: {{ config.colors.label_title }};">{{ config.texts.label_quantity }}</label>
                 <input type="text" name="quantity" placeholder="{{ config.texts.input_quantity_placeholder }}" value="1">
             </div>
@@ -254,6 +300,20 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
+        function toggleAuctionFields(val) {
+            const auctionDiv = document.getElementById('auctionFields');
+            const qtyGroup = document.getElementById('qtyGroup');
+            const priceLbl = document.getElementById('priceLabel');
+            if(val === '1') {
+                auctionDiv.style.display = 'block';
+                qtyGroup.style.display = 'none';
+                if(priceLbl) priceLbl.innerText = "سعر بداية المزاد";
+            } else {
+                auctionDiv.style.display = 'none';
+                qtyGroup.style.display = 'block';
+                if(priceLbl) priceLbl.innerText = "{{ config.texts.label_price }}";
+            }
+        }
         function toggleForm() {
             const container = document.getElementById('formContainer');
             const btn = document.getElementById('toggleBtn');
@@ -294,6 +354,7 @@ product_detail_template = """
         .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
         .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
         .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+        .auction-box { background: #1a1a1a; border: 1px solid #d97706; border-radius: 10px; padding: 15px; margin-bottom: 20px; text-align: right; }
         .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 15px; }
         .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
     </style>
@@ -301,7 +362,18 @@ product_detail_template = """
 <body>
     <div class="detail-container">
         <h1 class="product-title">{{ product.title }}</h1>
-        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
+        
+        {% if product.is_auction %}
+            <div class="auction-box">
+                <h3 style="color: #d97706; margin-top: 0; margin-bottom: 10px;">🔥 تفاصيل المزاد العلني</h3>
+                <p style="margin: 5px 0; font-size: 14px;"><b>سعر البداية:</b> {{ product.price }}</p>
+                <p style="margin: 5px 0; font-size: 15px; color: #25d366;"><b>السعر الحالي:</b> {{ product.current_bid }}</p>
+                {% if product.max_price %}<p style="margin: 5px 0; font-size: 14px;"><b>الحد الأقصى / الشراء الفوري:</b> {{ product.max_price }}</p>{% endif %}
+                {% if product.auction_end %}<p style="margin: 5px 0; font-size: 13px; color: #aaa;"><b>ينتهي في:</b> {{ product.auction_end.replace('T', ' الوقت: ') }}</p>{% endif %}
+            </div>
+        {% else %}
+            <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
+        {% endif %}
         
         {% if product.description %}
         <div class="product-desc">
@@ -336,8 +408,6 @@ copyright_template = """
 <body><div class="box"><h1>حقوق النشر والشروط</h1><p>{{ text }}</p><a href="/" class="back">← العودة إلى المتجر الرئيسي</a></div></body>
 </html>
 """
-
-current_html_template = default_html_template
 
 admin_template = """
 <!DOCTYPE html>
@@ -400,14 +470,29 @@ admin_template = """
             </div>
 
             <div class="section-box">
-                <h3>➕ إضافة منتج جديد (خاص بالمسؤول)</h3>
+                <h3>➕ إضافة منتج أو مزاد جديد (خاص بالمسؤول)</h3>
                 <form action="/admin-add-product" method="POST" enctype="multipart/form-data">
+                    <div class="input-group">
+                        <label>نوع العرض:</label>
+                        <select name="is_auction">
+                            <option value="0">منتج عادي (بيع مباشر)</option>
+                            <option value="1">مزاد علني</option>
+                        </select>
+                    </div>
                     {% if vis.label_title %}<label>{{ config.texts.label_title }}</label>{% endif %}
                     <input type="text" name="title" {% if vis.input_title_placeholder %}placeholder="{{ config.texts.input_title_placeholder }}"{% endif %} required>
                     {% if vis.label_price or vis.input_price_placeholder %}
                         {% if vis.label_price %}<label>{{ config.texts.label_price }}</label>{% endif %}
                         <input type="text" name="price" {% if vis.input_price_placeholder %}placeholder="{{ config.texts.input_price_placeholder }}"{% endif %}>
                     {% endif %}
+                    <div class="input-group">
+                        <label>السعر الأقصى / الشراء الفوري (للمزاد - اختياري):</label>
+                        <input type="text" name="max_price" placeholder="مثال: 100 دينار">
+                    </div>
+                    <div class="input-group">
+                        <label>تاريخ ووقت انتهاء المزاد:</label>
+                        <input type="datetime-local" name="auction_end" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box;">
+                    </div>
                     <div class="input-group">
                         <label>{{ config.texts.label_quantity }}</label>
                         <input type="text" name="quantity" placeholder="{{ config.texts.input_quantity_placeholder }}" value="1">
@@ -428,7 +513,7 @@ admin_template = """
                         <label>{{ config.texts.upload_text }}</label>
                         <input type="file" name="images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
                     {% endif %}
-                    <button type="submit" style="margin-top: 5px;">نشر المنتج من الإعدادات</button>
+                    <button type="submit" style="margin-top: 5px;">نشر المنتج / المزاد</button>
                 </form>
             </div>
 
@@ -546,157 +631,138 @@ def process_and_compress_image(image_file):
     except Exception:
         return None
 
+def get_all_products():
+    import json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM products ORDER BY id DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    products_list = []
+    for r in rows:
+        p = dict(r)
+        p['images'] = json.loads(p['images']) if p['images'] else []
+        products_list.append(p)
+    return products_list
+
 @app.route('/')
 def index():
-    global current_html_template
-    return render_template_string(current_html_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+    products = get_all_products()
+    config = get_setting('config')
+    controls = get_setting('controls')
+    vis = get_setting('visibility')
+    template = get_setting('template')
+    return render_template_string(template, products=products, config=config, controls=controls, vis=vis, error=None)
 
 @app.route('/product/<int:p_id>')
 def product_detail(p_id):
-    product = next((p for p in products if p['id'] == p_id), None)
-    if not product: return redirect(url_for('index'))
-    return render_template_string(product_detail_template, product=product, config=site_config, controls=site_controls, vis=text_visibility)
+    import json
+    conn = get_db_connection()
+    row = conn.execute("SELECT * FROM products WHERE id = ?", (p_id,)).fetchone()
+    conn.close()
+    if not row: return redirect(url_for('index'))
+    product = dict(row)
+    product['images'] = json.loads(product['images']) if product['images'] else []
+    
+    config = get_setting('config')
+    controls = get_setting('controls')
+    vis = get_setting('visibility')
+    return render_template_string(product_detail_template, product=product, config=config, controls=controls, vis=vis)
 
 @app.route('/copyright')
 def copyright_page():
-    if not site_controls['enable_copyright']: return redirect(url_for('index'))
-    return render_template_string(copyright_template, text=site_controls['copyright_text'])
+    controls = get_setting('controls')
+    if not controls['enable_copyright']: return redirect(url_for('index'))
+    return render_template_string(copyright_template, text=controls['copyright_text'])
 
 @app.route('/update-code', methods=['POST'])
 def update_code():
-    global current_html_template
     new_code = request.form.get('custom_html', '').strip()
     if new_code:
-        current_html_template = new_code
+        save_setting('template', new_code)
     return redirect(url_for('admin'))
 
 @app.route('/add', methods=['POST'])
 def add_product():
-    global product_id_counter
-    if site_controls['block_posting']: return redirect(url_for('index'))
+    import json
+    controls = get_setting('controls')
+    if controls['block_posting']: return redirect(url_for('index'))
+    
+    is_auction = 1 if request.form.get('is_auction') == '1' else 0
     title = request.form.get('title')
     price = request.form.get('price', '')
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
+    max_price = request.form.get('max_price', '').strip()
+    auction_end = request.form.get('auction_end', '').strip()
     contact_type = request.form.get('contact_type', 'phone')
     contact_value = request.form.get('contact_value', '').strip()
+    
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     images_list = [img for img in images_list if img]
+    images_json = json.dumps(images_list)
+    
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "description": description, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
-        product_id_counter += 1
+        conn = get_db_connection()
+        conn.execute("""
+            INSERT INTO products (title, price, quantity, description, is_auction, current_bid, max_price, auction_end, contact_type, contact_value, images, is_sold)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        """, (title, price, quantity, description, is_auction, price, max_price, auction_end, contact_type, contact_value, images_json))
+        conn.commit()
+        conn.close()
     return redirect(url_for('index'))
 
 @app.route('/admin-add-product', methods=['POST'])
 def admin_add_product():
-    global product_id_counter
+    import json
+    is_auction = 1 if request.form.get('is_auction') == '1' else 0
     title = request.form.get('title')
     price = request.form.get('price', '')
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
+    max_price = request.form.get('max_price', '').strip()
+    auction_end = request.form.get('auction_end', '').strip()
     contact_type = request.form.get('contact_type', 'phone')
     contact_value = request.form.get('contact_value', '').strip()
+    
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     images_list = [img for img in images_list if img]
+    images_json = json.dumps(images_list)
+    
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "quantity": quantity, "description": description, "contact_type": contact_type, "contact_value": contact_value, "images": images_list, "is_sold": False})
-        product_id_counter += 1
+        conn = get_db_connection()
+        conn.execute("""
+            INSERT INTO products (title, price, quantity, description, is_auction, current_bid, max_price, auction_end, contact_type, contact_value, images, is_sold)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+        """, (title, price, quantity, description, is_auction, price, max_price, auction_end, contact_type, contact_value, images_json))
+        conn.commit()
+        conn.close()
     return redirect(url_for('admin'))
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    global ADMIN_PASSWORD, current_html_template
+    admin_pwd = get_setting('admin_pwd')
+    template = get_setting('template')
+    config = get_setting('config')
+    controls = get_setting('controls')
+    vis = get_setting('visibility')
+    products = get_all_products()
+    
     authorized = False
     error = False
     if request.method == 'POST':
-        if request.form.get('password') == ADMIN_PASSWORD:
+        if request.form.get('password') == admin_pwd:
             authorized = True
         else:
             error = True
-    return render_template_string(admin_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
+            
+    return render_template_string(admin_template, products=products, config=config, controls=controls, vis=vis, authorized=authorized, error=error, raw_template=template, color_names_ar=color_names_ar)
 
 @app.route('/update-logo', methods=['POST'])
 def update_logo():
-    global site_controls
-    site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
+    controls = get_setting('controls')
+    controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
     logo_file = request.files.get('logo_file')
     if logo_file and logo_file.filename != '':
-        compressed_logo = process_and_compress_image(logo_file)
-        if compressed_logo: site_controls['logo_image'] = compressed_logo
-    return redirect(url_for('admin'))
-
-@app.route('/update-controls', methods=['POST'])
-def update_controls():
-    global site_controls
-    site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
-    site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
-    site_controls['enable_socials'] = True if request.form.get('enable_socials') == 'on' else False
-    site_controls['enable_copyright'] = True if request.form.get('enable_copyright') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-texts', methods=['POST'])
-def update_texts():
-    global site_config, text_visibility
-    for key in site_config['texts']:
-        form_txt = request.form.get(f'txt_{key}')
-        if form_txt: site_config['texts'][key] = form_txt
-        text_visibility[key] = True if request.form.get(f'vis_{key}') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-socials', methods=['POST'])
-def update_socials():
-    global site_controls
-    s1_name, s1_url = request.form.get('s1_name', '').strip(), request.form.get('s1_url', '').strip()
-    s2_name, s2_url = request.form.get('s2_name', '').strip(), request.form.get('s2_url', '').strip()
-    new_links = []
-    if s1_name and s1_url: new_links.append({"name": s1_name, "url": s1_url})
-    if s2_name and s2_url: new_links.append({"name": s2_name, "url": s2_url})
-    site_controls['social_links'] = new_links
-    return redirect(url_for('admin'))
-
-@app.route('/update-copyright', methods=['POST'])
-def update_copyright():
-    global site_controls
-    text = request.form.get('copyright_text', '').strip()
-    if text: site_controls['copyright_text'] = text
-    return redirect(url_for('admin'))
-
-@app.route('/update-password', methods=['POST'])
-def update_password():
-    global ADMIN_PASSWORD
-    new_pwd = request.form.get('new_password', '').strip()
-    if new_pwd: ADMIN_PASSWORD = new_pwd
-    return redirect(url_for('admin'))
-
-@app.route('/update-config', methods=['POST'])
-def update_config():
-    global site_config
-    site_config['title'] = request.form.get('title', site_config['title'])
-    site_config['subtitle'] = request.form.get('subtitle', site_config['subtitle'])
-    for key in site_config['colors']:
-        val = request.form.get(f'c_{key}')
-        if val: site_config['colors'][key] = val
-    if request.form.get('remove_bg_image') == 'on': site_config['bg_image'] = ""
-    bg_file = request.files.get('bg_image_file')
-    if bg_file and bg_file.filename != '':
-        compressed_bg = process_and_compress_image(bg_file)
-        if compressed_bg: site_config['bg_image'] = compressed_bg
-    return redirect(url_for('admin'))
-
-@app.route('/delete/<int:p_id>', methods=['POST'])
-def delete_product(p_id):
-    global products
-    products = [p for p in products if p['id'] != p_id]
-    return redirect(url_for('admin'))
-
-@app.route('/toggle-sold/<int:p_id>', methods=['POST'])
-def toggle_sold(p_id):
-    global products
-    for p in products:
-        if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
-    return redirect(url_for('admin'))
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+        compressed_logo = process_and_compress_ima
