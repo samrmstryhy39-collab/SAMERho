@@ -366,12 +366,12 @@ copyright_template = """
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>حقوق النشر والشروط</title>
     <style>
-        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-        .box { background: #111; border: 1px solid #222; padding: 30px; border-radius: 12px; width: 100%; flex: 1; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
-        .content-area { max-width: 900px; margin: 0 auto; width: 100%; }
-        h1 { color: #25d366; text-align: center; font-size: 22px; margin-bottom: 25px; } 
-        p { color: #ddd; font-size: 15px; line-height: 1.8; white-space: pre-wrap; text-align: right; } 
-        .back { display: block; text-align: center; margin-top: 30px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
+        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .box { background: #111; border: 1px solid #222; padding: 40px; border-radius: 0; width: 100%; min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
+        .content-area { max-width: 1200px; margin: 0 auto; width: 100%; }
+        h1 { color: #25d366; text-align: center; font-size: 26px; margin-bottom: 30px; } 
+        p { color: #ddd; font-size: 16px; line-height: 1.9; white-space: pre-wrap; text-align: right; } 
+        .back { display: block; text-align: center; margin-top: 40px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -786,7 +786,8 @@ def update_logo():
     logo_file = request.files.get('logo_file')
     if logo_file and logo_file.filename != '':
         compressed_logo = process_and_compress_image(logo_file)
-        if compressed_logo: site_controls['logo_image'] = compressed_logo
+        if compressed_logo:
+            site_controls['logo_image'] = compressed_logo
     return redirect(url_for('admin'))
 
 @app.route('/update-controls', methods=['POST'])
@@ -795,4 +796,4 @@ def update_controls():
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
     site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
-   
+    site_c
