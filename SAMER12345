@@ -3,16 +3,19 @@ import os
 import base64
 from io import BytesIO
 from PIL import Image
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
 products = []
+auctions = []
 notes = []
 reviews = [
     {"id": 1, "name": "محمد أحمد", "comment": "متجر فخم جداً والقطع أصلية وتوصيل سريع، شكراً لكم!"},
     {"id": 2, "name": "عمر خالد", "comment": "تجربة شراء ممتازة والتعامل راقي جداً."}
 ]
 product_id_counter = 1
+auction_id_counter = 1
 note_id_counter = 1
 review_id_counter = 3
 ADMIN_PASSWORD = "samemomomo**1"
@@ -24,6 +27,7 @@ site_controls = {
     "enable_copyright": True,
     "enable_contact_btn": True,   
     "enable_reviews_page": True,  
+    "enable_auctions": True,      
     "use_logo_image": False,
     "logo_image": "",
     "social_links": [
@@ -153,6 +157,15 @@ default_html_template = """
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         .search-box { width: 100%; max-width: 900px; margin-bottom: 20px; }
         .search-input { width: 100%; padding: 12px 18px; background: #111; border: 1px solid #333; border-radius: 10px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
+        
+        .auctions-section { width: 100%; max-width: 900px; margin-bottom: 30px; }
+        .auction-card { background: #151515; border: 1px solid #d97706; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .auction-header { display: flex; justify-content: space-between; align-items: center; }
+        .auction-title { font-size: 16px; font-weight: bold; color: #fbbf24; }
+        .auction-timer { background: rgba(217, 119, 6, 0.2); border: 1px solid #d97706; color: #fbbf24; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+        .auction-details { font-size: 13px; color: #ccc; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .bid-btn { background: #d97706; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; text-align: center; text-decoration: none; display: block; }
+
         .products-section { width: 100%; max-width: 900px; margin-bottom: 20px; flex: 1; }
         .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
         @media (min-width: 768px) { .products-grid { grid-template-columns: repeat(4, 1fr); } }
@@ -205,6 +218,27 @@ default_html_template = """
     {% if controls.enable_search and vis.search_placeholder %}
     <div class="search-box"><input type="text" id="searchInput" class="search-input" placeholder="{{ config.texts.search_placeholder }}" onkeyup="filterProducts()"></div>
     {% endif %}
+
+    {% if controls.enable_auctions and auctions|length > 0 %}
+    <div class="auctions-section">
+        <h2 style="color: #fbbf24; margin-bottom: 15px; text-align: right; font-size: 18px;">🔥 المزادات الحالية المشتعلة</h2>
+        {% for a in auctions %}
+        <div class="auction-card">
+            <div class="auction-header">
+                <span class="auction-title">🏷️ {{ a.title }}</span>
+                <span class="auction-timer" data-end="{{ a.end_time }}">⏳ جاري التحميل...</span>
+            </div>
+            <div class="auction-details">
+                <span>السعر الحالي: <b style="color: #25d366;">{{ a.current_price }}</b></span>
+                <span>الحد الأدنى للمزايدة: <b>{{ a.min_bid }}</b></span>
+                {% if a.max_price %}<span>الحد الأقصى (الشراء الفوري): <b style="color: #ff5252;">{{ a.max_price }}</b></span>{% endif %}
+            </div>
+            <a href="/auction/{{ a.id }}" class="bid-btn">مشاركة وعرض تفاصيل المزاد 🔨</a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="products-section">
         {% if vis.heading_products %}<h2 style="color: {{ config.colors.products_heading }}; margin-bottom: 15px; text-align: right;">{{ config.texts.heading_products }}</h2>{% endif %}
         <div class="products-grid" id="productsGrid">
@@ -293,6 +327,26 @@ default_html_template = """
                 }
             }
         }
+        function updateTimers() {
+            const timers = document.querySelectorAll('.auction-timer');
+            timers.forEach(timer => {
+                const endTime = new Date(timer.getAttribute('data-end')).getTime();
+                const now = new Date().getTime();
+                const distance = endTime - now;
+                if (distance < 0) {
+                    timer.innerHTML = " انتهى المزاد ❌";
+                } else {
+                    const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    timer.innerHTML = `⏳ متبقي: ${days}د ${hours}س ${minutes}د ${seconds}ث`;
+                }
+            });
+        }
+        setInterval(updateTimers, 1000);
+        updateTimers();
+
         function toggleForm() {
             const container = document.getElementById('formContainer');
             const btn = document.getElementById('toggleBtn');
@@ -318,6 +372,43 @@ default_html_template = """
 </body>
 </html>
 """
+auction_detail_template = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مزاد: {{ auction.title }}</title>
+    <style>
+        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .box { background: #111; border: 1px solid #d97706; border-radius: 12px; padding: 25px; width: 100%; max-width: 600px; box-sizing: border-box; margin-top: 20px; }
+        h1 { color: #fbbf24; text-align: center; font-size: 20px; margin-bottom: 15px; }
+        .info { font-size: 14px; margin-bottom: 10px; color: #ddd; display: flex; justify-content: space-between; background: #000; padding: 10px; border-radius: 8px; border: 1px solid #222; }
+        input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 12px; border-radius: 8px; background: #d97706; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .back { display: block; text-align: center; margin-top: 20px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>🔨 مزاد على: {{ auction.title }}</h1>
+        <p style="color: #bbb; font-size: 13px; margin-bottom: 15px; text-align: right;">{{ auction.description }}</p>
+        <div class="info"><span>السعر الحالي:</span><b style="color: #25d366;">{{ auction.current_price }}</b></div>
+        <div class="info"><span>الحد الأدنى للمزايدة:</span><b>{{ auction.min_bid }}</b></div>
+        {% if auction.max_price %}<div class="info"><span>الحد الأقصى (الشراء الفوري):</span><b style="color: #ff5252;">{{ auction.max_price }}</b></div>{% endif %}
+        
+        <form action="/bid/{{ auction.id }}" method="POST" style="margin-top: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">اسمك أو رقمك للتواصل:</label>
+            <input type="text" name="bidder_name" placeholder="اسمك الكريم" required>
+            <label style="display: block; margin-bottom: 5px; font-size: 13px;">قيمة السعر المقترح للمزايدة:</label>
+            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" required>
+            <button type="submit">تثبيت المزايدة 🚀</button>
+        </form>
+        <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
+    </div>
+</body>
+</html>
+"""
+
 reviews_page_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -436,7 +527,6 @@ copyright_template = """
 """
 
 current_html_template = default_html_template
-
 admin_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -447,7 +537,7 @@ admin_template = """
         body { background: #000; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .container { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; width: 100%; max-width: 650px; margin-top: 20px; }
         h2, h3 { color: #fff; text-align: center; margin-bottom: 20px; }
-        input[type="text"], input[type="password"], textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
+        input[type="text"], input[type="password"], input[type="number"], textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
         input[type="color"] { width: 50px; height: 32px; border: 1px solid #333; border-radius: 6px; background: #000; cursor: pointer; padding: 0; vertical-align: middle; }
         button { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; background: #25d366; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 15px; }
         .product-row { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #222; gap: 10px; }
@@ -480,16 +570,44 @@ admin_template = """
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
             <div class="section-box">
-                <h3>💻 محرر الكود الداخلي (لتعديل واجهة المتجر مباشرة)</h3>
+                <h3>🔨 إضافة وإدارة المزادات</h3>
+                <form action="/admin-add-auction" method="POST">
+                    <label>عنوان المزاد (اسم القطعة):</label>
+                    <input type="text" name="title" placeholder="مثال: ساعة فاخرة نادرة" required>
+                    <label>وصف المزاد أو تفاصيله:</label>
+                    <textarea name="description" rows="3" placeholder="تفاصيل وحالة القطعة..."></textarea>
+                    <label>السعر الابتدائي:</label>
+                    <input type="text" name="current_price" placeholder="مثال: 50 دينار" required>
+                    <label>الحد الأدنى للزيادة:</label>
+                    <input type="text" name="min_bid" placeholder="مثال: 5 دينار" required>
+                    <label>الحد الأقصى للشراء الفوري (اختياري):</label>
+                    <input type="text" name="max_price" placeholder="مثال: 150 دينار">
+                    <label>مدة المزاد بالساعات (مثال: 48 ساعة):</label>
+                    <input type="number" name="duration_hours" value="48" required>
+                    <button type="submit" style="background: #d97706; margin-top: 10px;">إطلاق المزاد 🚀</button>
+                </form>
+                <div style="margin-top: 15px;">
+                    <h4 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">المزادات النشطة:</h4>
+                    {% if auctions|length == 0 %}<p style="color: #777; font-size: 12px; text-align: center;">لا توجد مزادات نشطة.</p>{% endif %}
+                    {% for a in auctions %}
+                        <div class="product-row">
+                            <span><b>{{ a.title }}</b> ({{ a.current_price }})</span>
+                            <form action="/delete-auction/{{ a.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="section-box">
+                <h3>💻 محرر الكود الداخلي</h3>
                 <form action="/update-code" method="POST">
-                    <label>كود HTML / CSS للواجهة الرئيسية:</label>
                     <textarea name="custom_html" rows="10" style="font-family: monospace; font-size: 11px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
                     <button type="submit">حفظ وتحديث كود الواجهة</button>
                 </form>
             </div>
 
             <div class="section-box">
-                <h3>⭐ إدارة وحذف آراء العملاء</h3>
+                <h3>⭐ إدارة آراء العملاء</h3>
                 {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 10px; font-size: 12px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
                 {% for r in reviews %}
                     <div class="product-row">
@@ -500,19 +618,17 @@ admin_template = """
             </div>
 
             <div class="section-box">
-                <h3>💡 مفكرة الأفكار والملاحظات (كتابات، أرقام وصور)</h3>
+                <h3>💡 مفكرة الأفكار والملاحظات</h3>
                 <form action="/add-note" method="POST" enctype="multipart/form-data">
                     <label>عنوان الفكرة أو الملاحظة:</label>
-                    <input type="text" name="note_title" placeholder="مثال: أفكار تسويقية أو أسعار جديدة" required>
+                    <input type="text" name="note_title" required>
                     <label>نصوص، أرقام، أو تفاصيل الفكرة:</label>
-                    <textarea name="note_content" rows="4" placeholder="اكتب أفكارك، أرقام، أو تفاصيل هنا..." required></textarea>
-                    <label>إرفاق صور توضيحية للفكرة (اختياري):</label>
+                    <textarea name="note_content" rows="4" required></textarea>
+                    <label>إرفاق صور توضيحية:</label>
                     <input type="file" name="note_images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
-                    <button type="submit">إضافة الفكرة إلى المفكرة</button>
+                    <button type="submit">إضافة للمفكرة</button>
                 </form>
                 <div style="margin-top: 15px;">
-                    <h4 style="color: #ccc; font-size: 14px; margin-bottom: 10px;">الأفكار والملاحظات المحفوظة:</h4>
-                    {% if notes|length == 0 %}<p style="color: #777; font-size: 12px; text-align: center;">لا توجد أفكار مسجلة حالياً.</p>{% endif %}
                     {% for n in notes %}
                         <div class="note-card">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -520,155 +636,88 @@ admin_template = """
                                 <form action="/delete-note/{{ n.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn" style="padding: 3px 8px; font-size: 11px;">حذف</button></form>
                             </div>
                             <p style="color: #ddd; white-space: pre-wrap; margin: 5px 0;">{{ n.content }}</p>
-                            {% if n.images|length > 0 %}
-                                <div style="display: flex; gap: 6px; overflow-x: auto; margin-top: 8px;">
-                                    {% for img in n.images %}<img src="{{ img }}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 4px; border: 1px solid #444;">{% endfor %}
-                                </div>
-                            {% endif %}
                         </div>
                     {% endfor %}
                 </div>
             </div>
 
             <div class="section-box">
-                <h3>🖼️ إدارة شعار الموقع (صورة أو نص)</h3>
+                <h3>🖼️ إدارة شعار الموقع</h3>
                 <form action="/update-logo" method="POST" enctype="multipart/form-data">
-                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل وعرض صورة الشعار بدلاً من اسم الموقع النصي</label>
-                    <label style="margin-top: 10px;">اختر صورة الشعار من الجهاز:</label>
+                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار</label>
                     <input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
-                    <button type="submit">حفظ إعدادات الشعار</button>
+                    <button type="submit">حفظ الشعار</button>
                 </form>
             </div>
 
             <div class="section-box">
-                <h3>➕ إضافة منتج جديد (خاص بالمسؤول)</h3>
+                <h3>➕ إضافة منتج جديد</h3>
                 <form action="/admin-add-product" method="POST" enctype="multipart/form-data">
-                    {% if vis.label_title %}<label>{{ config.texts.label_title }}</label>{% endif %}
-                    <input type="text" name="title" {% if vis.input_title_placeholder %}placeholder="{{ config.texts.input_title_placeholder }}"{% endif %} required>
-                    {% if vis.label_price or vis.input_price_placeholder %}
-                        {% if vis.label_price %}<label>{{ config.texts.label_price }}</label>{% endif %}
-                        <input type="text" name="price" {% if vis.input_price_placeholder %}placeholder="{{ config.texts.input_price_placeholder }}"{% endif %}>
-                    {% endif %}
-                    <div class="input-group">
-                        <label>{{ config.texts.label_quantity }}</label>
-                        <input type="text" name="quantity" placeholder="{{ config.texts.input_quantity_placeholder }}" value="1">
-                    </div>
-                    <div class="input-group">
-                        <label>{{ config.texts.label_description }}</label>
-                        <textarea name="description" rows="3" placeholder="{{ config.texts.input_description_placeholder }}"></textarea>
-                    </div>
-                    {% if vis.label_contact_method or vis.contact_type_instagram or vis.contact_type_phone or vis.input_contact_placeholder %}
-                        {% if vis.label_contact_method %}<label>{{ config.texts.label_contact_method }}</label>{% endif %}
-                        <select name="contact_type">
-                            {% if vis.contact_type_instagram %}<option value="instagram">{{ config.texts.contact_type_instagram }}</option>{% endif %}
-                            {% if vis.contact_type_phone %}<option value="phone">{{ config.texts.contact_type_phone }}</option>{% endif %}
-                        </select>
-                        <input type="text" name="contact_value" {% if vis.input_contact_placeholder %}placeholder="{{ config.texts.input_contact_placeholder }}"{% endif %}>
-                    {% endif %}
-                    {% if vis.upload_text %}
-                        <label>{{ config.texts.upload_text }}</label>
-                        <input type="file" name="images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
-                    {% endif %}
-                    <button type="submit" style="margin-top: 5px;">نشر المنتج</button>
+                    <label>{{ config.texts.label_title }}</label><input type="text" name="title" required>
+                    <label>{{ config.texts.label_price }}</label><input type="text" name="price">
+                    <label>{{ config.texts.label_quantity }}</label><input type="text" name="quantity" value="1">
+                    <label>{{ config.texts.label_description }}</label><textarea name="description" rows="3"></textarea>
+                    <label>{{ config.texts.upload_text }}</label><input type="file" name="images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
+                    <button type="submit">نشر المنتج</button>
                 </form>
             </div>
 
             <div class="section-box">
                 <h3>إدارة الخصائص والميزات العامة</h3>
                 <form action="/update-controls" method="POST">
-                    <label class="checkbox-label"><input type="checkbox" name="block_posting" {% if controls.block_posting %}checked{% endif %}> منع المستخدمين من إضافة ونشر منتجات جديدة</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enable_search" {% if controls.enable_search %}checked{% endif %}> تفعيل شريط البحث عن العناصر في الواجهة</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enable_contact_btn" {% if controls.enable_contact_btn %}checked{% endif %}> تفعيل وعرض زر ورقم/طريقة التواصل في صفحة تفاصيل المنتج</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enable_socials" {% if controls.enable_socials %}checked{% endif %}> تفعيل وعرض حسابات التواصل الاجتماعي في أسفل المتجر</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enable_copyright" {% if controls.enable_copyright %}checked{% endif %}> تفعيل وعرض صفحة وحقوق النشر في أسفل المتجر</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enable_reviews_page" {% if controls.enable_reviews_page %}checked{% endif %}> تفعيل وعرض زر وصفحة "آراء العملاء" للزوار</label>
-                    <button type="submit" style="margin-top: 10px;">حفظ الخصائص العامة</button>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_auctions" {% if controls.enable_auctions %}checked{% endif %}> تفعيل قسم المزادات</label>
+                    <label class="checkbox-label"><input type="checkbox" name="block_posting" {% if controls.block_posting %}checked{% endif %}> منع المستخدمين من الإضافة</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_search" {% if controls.enable_search %}checked{% endif %}> تفعيل البحث</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_contact_btn" {% if controls.enable_contact_btn %}checked{% endif %}> تفعيل زر التواصل</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_socials" {% if controls.enable_socials %}checked{% endif %}> تفعيل السوشيال ميديا</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_copyright" {% if controls.enable_copyright %}checked{% endif %}> تفعيل حقوق النشر</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_reviews_page" {% if controls.enable_reviews_page %}checked{% endif %}> تفعيل آراء العملاء</label>
+                    <button type="submit" style="margin-top: 10px;">حفظ الخصائص</button>
                 </form>
             </div>
 
             <div class="section-box">
-                <h3>إدارة إظهار، إطفاء وتعديل نصوص وكلمات الموقع</h3>
+                <h3>إدارة النصوص والظهور</h3>
                 <form action="/update-texts" method="POST">
-                    <p style="font-size: 12px; color: #888; margin-bottom: 12px; text-align: center;">ضع علامة صح لإظهار الكلمة أو قم بإزالتها لإطفائها، ويمكنك تعديل النص.</p>
                     {% for key, val in config.texts.items() %}
                         <div class="row-item">
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #fff; cursor: pointer; width: 45%; margin: 0;">
-                                <input type="checkbox" name="vis_{{ key }}" {% if vis[key] %}checked{% endif %} style="width: 16px; height: 16px; cursor: pointer;">{{ key }}
+                                <input type="checkbox" name="vis_{{ key }}" {% if vis[key] %}checked{% endif %}>{{ key }}
                             </label>
                             <input type="text" name="txt_{{ key }}" value="{{ val }}" required>
                         </div>
                     {% endfor %}
-                    <button type="submit" style="margin-top: 15px;">حفظ النصوص وإعدادات الظهور</button>
+                    <button type="submit" style="margin-top: 15px;">حفظ النصوص</button>
                 </form>
             </div>
 
             <div class="section-box">
-                <h3>إدارة حسابات التواصل (تظهر أسفل المتجر)</h3>
-                <form action="/update-socials" method="POST">
-                    <label>اسم الحساب الأول:</label><input type="text" name="s1_name" value="{{ controls.social_links[0].name if controls.social_links|length > 0 else '' }}" placeholder="مثال: إنستغرام">
-                    <label>رابط الحساب الأول:</label><input type="text" name="s1_url" value="{{ controls.social_links[0].url if controls.social_links|length > 0 else '' }}" placeholder="https://instagram.com/...">
-                    <label style="margin-top: 15px;">اسم الحساب الثاني:</label><input type="text" name="s2_name" value="{{ controls.social_links[1].name if controls.social_links|length > 1 else '' }}" placeholder="مثال: تيليجرام">
-                    <label>رابط الحساب الثاني:</label><input type="text" name="s2_url" value="{{ controls.social_links[1].url if controls.social_links|length > 1 else '' }}" placeholder="https://t.me/...">
-                    <button type="submit" style="margin-top: 10px;">حفظ الحسابات</button>
-                </form>
-            </div>
-
-            <div class="section-box">
-                <h3>تعديل صفحة حقوق النشر</h3>
-                <form action="/update-copyright" method="POST">
-                    <label>النص الذي سيظهر في صفحة حقوق النشر:</label>
-                    <textarea name="copyright_text" rows="5" required>{{ controls.copyright_text }}</textarea>
-                    <button type="submit">حفظ نص حقوق النشر</button>
-                </form>
-            </div>
-
-            <div class="section-box">
-                <h3>تغيير كلمة المرور</h3>
-                <form action="/update-password" method="POST">
-                    <label>كلمة المرور الجديدة:</label><input type="password" name="new_password" placeholder="أدخل كلمة المرور الجديدة" required>
-                    <button type="submit">تحديث كلمة المرور</button>
-                </form>
-            </div>
-
-            <div class="section-box">
-                <h3>تعديل واجهة وألوان الموقع</h3>
+                <h3>تعديل الألوان والتصميم</h3>
                 <form action="/update-config" method="POST" enctype="multipart/form-data">
                     <label>اسم الموقع:</label><input type="text" name="title" value="{{ config.title }}" required>
-                    <label>شعار / وصف الموقع:</label><input type="text" name="subtitle" value="{{ config.subtitle }}" required>
-                    <label>صورة خلفية الواجهة (من المعرض):</label><input type="file" name="bg_image_file" accept="image/*" style="margin-bottom: 10px; color: #fff;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; background: #000; padding: 8px 12px; border-radius: 6px; border: 1px solid #222; margin-bottom: 15px;">
-                        <span style="font-size: 13px; color: #ccc;">إلغاء وإزالة صورة الخلفية الحالية؟</span>
-                        <input type="checkbox" name="remove_bg_image" style="width: 18px; height: 18px; cursor: pointer;">
-                    </div>
-                    <h3 style="margin-top: 25px; font-size: 15px; border-bottom: 1px solid #222; padding-bottom: 8px;">تعديل ألوان أجزاء الموقع</h3>
+                    <label>وصف الموقع:</label><input type="text" name="subtitle" value="{{ config.subtitle }}" required>
+                    <label>صورة الخلفية:</label><input type="file" name="bg_image_file" accept="image/*" style="margin-bottom: 10px; color: #fff;">
                     {% for color_key, color_val in config.colors.items() %}
                     <div class="row-item">
                         <span>{{ color_names_ar.get(color_key, color_key) }}:</span>
                         <input type="color" name="c_{{ color_key }}" value="{{ color_val }}">
                     </div>
                     {% endfor %}
-                    <button type="submit" style="margin-top: 15px;">حفظ الألوان والتصميم</button>
+                    <button type="submit" style="margin-top: 15px;">حفظ التصميم</button>
                 </form>
             </div>
 
             <div class="section-box">
-                <h3>قائمة المنتجات (الإدارة، البيع والحذف)</h3>
-                <div>
-                    {% if products|length == 0 %}<p style="color: #888; text-align: center; padding: 15px;">لا توجد منتجات مسجلة حالياً.</p>{% endif %}
-                    {% for p in products %}
-                        <div class="product-row">
-                            <span><b>{{ p.title }}</b> ({{ p.price }}) {% if p.is_sold %}<span style="color: #dc2626;">[تم البيع]</span>{% endif %}</span>
-                            <div class="product-actions">
-                                {% if p.is_sold %}
-                                    <form action="/toggle-sold/{{ p.id }}" method="POST" style="margin:0;"><button type="submit" class="unsold-btn">إلغاء البيع</button></form>
-                                {% else %}
-                                    <form action="/toggle-sold/{{ p.id }}" method="POST" style="margin:0;"><button type="submit" class="sold-btn">تم البيع</button></form>
-                                {% endif %}
-                                <form action="/delete/{{ p.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
-                            </div>
+                <h3>قائمة المنتجات الحالية</h3>
+                {% for p in products %}
+                    <div class="product-row">
+                        <span><b>{{ p.title }}</b> ({{ p.price }})</span>
+                        <div class="product-actions">
+                            <form action="/toggle-sold/{{ p.id }}" method="POST" style="margin:0;"><button type="submit" class="{% if p.is_sold %}unsold-btn{% else %}sold-btn{% endif %}">{% if p.is_sold %}إلغاء البيع{% else %}تم البيع{% endif %}</button></form>
+                            <form action="/delete/{{ p.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
                         </div>
-                    {% endfor %}
-                </div>
+                    </div>
+                {% endfor %}
             </div>
         {% endif %}
         <a href="/" class="back-link">← العودة إلى المتجر الرئيسي</a>
@@ -676,124 +725,7 @@ admin_template = """
 </body>
 </html>
 """
-reviews_page_template = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>آراء العملاء - {{ config.title }}</title>
-    <style>
-        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-        .box { background: #111; border: 1px solid #222; padding: 25px; border-radius: 12px; width: 100%; max-width: 650px; margin-top: 20px; box-sizing: border-box; }
-        h1 { color: #ff5252; text-align: center; font-size: 20px; margin-bottom: 20px; }
-        .review-card { background: #000; padding: 12px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; }
-        .review-card p { color: #fff; font-size: 13px; margin: 0 0 5px 0; }
-        .review-card span { color: #25d366; font-size: 11px; font-weight: bold; }
-        .add-review-form { margin-top: 25px; border-top: 1px solid #222; padding-top: 20px; }
-        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 12px; border-radius: 8px; background: #25d366; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .back { display: block; text-align: center; margin-top: 25px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 14px; }
-    </style>
-</head>
-<body>
-    <div class="box">
-        <h1>⭐ آراء العملاء وتجاربهم</h1>
-        {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 15px; font-size: 13px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
-        {% for r in reviews %}
-            <div class="review-card">
-                <p>"{{ r.comment }}"</p>
-                <span>- {{ r.name }}</span>
-            </div>
-        {% endfor %}
-        
-        <div class="add-review-form">
-            <h3 style="color: #fff; font-size: 15px; margin-bottom: 12px; text-align: right;">أضف رأيك وتجربتك معنا:</h3>
-            <form action="/add-review" method="POST">
-                <input type="text" name="reviewer_name" placeholder="اسمك الكريم" required>
-                <textarea name="reviewer_comment" rows="3" placeholder="اكتب رأيك هنا..." required></textarea>
-                <button type="submit">نشر الرأي</button>
-            </form>
-        </div>
-        <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
-    </div>
-</body>
-</html>
-"""
 
-product_detail_template = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ product.title }} - {{ config.title }}</title>
-    <style>
-        body { background-color: {{ config.colors.bg_color }}; color: #ffffff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .detail-container { background: #111; border: 1px solid #222; border-radius: 14px; padding: 25px; width: 100%; max-width: 600px; box-shadow: 0 4px 25px rgba(0,0,0,0.9); margin-top: 20px; text-align: center; }
-        .gallery { display: flex; flex-direction: row; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
-        .gallery img { width: 100%; max-height: 450px; object-fit: contain; border-radius: 8px; background: #000; border: 1px solid #333; flex: 0 0 100%; }
-        .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
-        .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
-        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
-        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 15px; }
-        .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
-    </style>
-</head>
-<body>
-    <div class="detail-container">
-        <h1 class="product-title">{{ product.title }}</h1>
-        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
-        {% if product.description %}
-        <div class="product-desc">
-            <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
-            {{ product.description }}
-        </div>
-        {% endif %}
-        <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
-        {% if controls.enable_contact_btn and not product.is_sold %}
-            {% if product.contact_type == 'instagram' %}
-                <a class="contact-btn" href="https://instagram.com/{{ product.contact_value.replace('@', '') }}" target="_blank">{% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}</a>
-            {% else %}
-                <a class="contact-btn" href="https://wa.me/{{ product.contact_value }}" target="_blank">{% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}</a>
-            {% endif %}
-        {% elif product.is_sold %}
-            <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
-        {% endif %}
-        {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
-    </div>
-</body>
-</html>
-"""
-
-copyright_template = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حقوق النشر والشروط</title>
-    <style>
-        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-        .box { background: #111; border: 1px solid #222; padding: 30px; border-radius: 12px; width: 100%; flex: 1; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box; }
-        .content-area { max-width: 900px; margin: 0 auto; width: 100%; }
-        h1 { color: #25d366; text-align: center; font-size: 22px; margin-bottom: 25px; } 
-        p { color: #ddd; font-size: 15px; line-height: 1.8; white-space: pre-wrap; text-align: right; } 
-        .back { display: block; text-align: center; margin-top: 30px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
-    </style>
-</head>
-<body>
-    <div class="box">
-        <div class="content-area">
-            <h1>حقوق النشر والشروط</h1>
-            <p>{{ text }}</p>
-        </div>
-        <div>
-            <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
-        </div>
-    </div>
-</body>
-</html>
-"""
-
-current_html_template = default_html_template
 def process_and_compress_image(image_file):
     try:
         img = Image.open(image_file)
@@ -808,7 +740,54 @@ def process_and_compress_image(image_file):
 @app.route('/')
 def index():
     global current_html_template
-    return render_template_string(current_html_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+    return render_template_string(current_html_template, products=products, auctions=auctions, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+
+@app.route('/auction/<int:a_id>')
+def auction_detail(a_id):
+    auction = next((a for a in auctions if a['id'] == a_id), None)
+    if not auction: return redirect(url_for('index'))
+    return render_template_string(auction_detail_template, auction=auction)
+
+@app.route('/bid/<int:a_id>', methods=['POST'])
+def place_bid(a_id):
+    global auctions
+    bidder_name = request.form.get('bidder_name', '').strip()
+    bid_amount = request.form.get('bid_amount', '').strip()
+    for a in auctions:
+        if a['id'] == a_id and bid_amount:
+            a['current_price'] = f"{bid_amount} (بواسطة: {bidder_name})"
+    return redirect(url_for('auction_detail', a_id=a_id))
+
+@app.route('/admin-add-auction', methods=['POST'])
+def admin_add_auction():
+    global auction_id_counter, auctions
+    title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
+    current_price = request.form.get('current_price', '').strip()
+    min_bid = request.form.get('min_bid', '').strip()
+    max_price = request.form.get('max_price', '').strip()
+    duration_hours = int(request.form.get('duration_hours', 48))
+    end_time = datetime.now() + timedelta(hours=duration_hours)
+    
+    if title and current_price:
+        auction_data = {
+            "id": auction_id_counter,
+            "title": title,
+            "description": description,
+            "current_price": current_price,
+            "min_bid": min_bid,
+            "max_price": max_price,
+            "end_time": end_time.isoformat()
+        }
+        auctions.insert(0, auction_data)
+        auction_id_counter += 1
+    return redirect(url_for('admin'))
+
+@app.route('/delete-auction/<int:a_id>', methods=['POST'])
+def delete_auction(a_id):
+    global auctions
+    auctions = [a for a in auctions if a['id'] != a_id]
+    return redirect(url_for('admin'))
 
 @app.route('/reviews')
 def reviews_page():
@@ -830,8 +809,7 @@ def copyright_page():
 def update_code():
     global current_html_template
     new_code = request.form.get('custom_html', '').strip()
-    if new_code:
-        current_html_template = new_code
+    if new_code: current_html_template = new_code
     return redirect(url_for('admin'))
 
 @app.route('/add-review', methods=['POST'])
@@ -840,12 +818,7 @@ def add_review():
     name = request.form.get('reviewer_name', '').strip()
     comment = request.form.get('reviewer_comment', '').strip()
     if name and comment:
-        review_data = {
-            "id": review_id_counter,
-            "name": name,
-            "comment": comment
-        }
-        reviews.insert(0, review_data)
+        reviews.insert(0, {"id": review_id_counter, "name": name, "comment": comment})
         review_id_counter += 1
     return redirect(url_for('reviews_page'))
 
@@ -861,16 +834,8 @@ def add_note():
     title = request.form.get('note_title', '').strip()
     content = request.form.get('note_content', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('note_images') if f and f.filename != '']
-    images_list = [img for img in images_list if img]
-    
     if title and content:
-        note_data = {
-            "id": note_id_counter,
-            "title": title,
-            "content": content,
-            "images": images_list
-        }
-        notes.insert(0, note_data)
+        notes.insert(0, {"id": note_id_counter, "title": title, "content": content, "images": [img for img in images_list if img]})
         note_id_counter += 1
     return redirect(url_for('admin'))
 
@@ -888,24 +853,13 @@ def add_product():
     price = request.form.get('price', '')
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
-    contact_type = request.form.get('contact_type', 'phone')
-    contact_value = request.form.get('contact_value', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
-    images_list = [img for img in images_list if img]
-    
     if title:
-        product_data = {
-            "id": product_id_counter,
-            "title": title,
-            "price": price,
-            "quantity": quantity,
-            "description": description,
-            "contact_type": contact_type,
-            "contact_value": contact_value,
-            "images": images_list,
-            "is_sold": False
-        }
-        products.insert(0, product_data)
+        products.insert(0, {
+            "id": product_id_counter, "title": title, "price": price, "quantity": quantity,
+            "description": description, "contact_type": "phone", "contact_value": "",
+            "images": [img for img in images_list if img], "is_sold": False
+        })
         product_id_counter += 1
     return redirect(url_for('index'))
 
@@ -916,38 +870,15 @@ def admin_add_product():
     price = request.form.get('price', '')
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
-    contact_type = request.form.get('contact_type', 'phone')
-    contact_value = request.form.get('contact_value', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
-    images_list = [img for img in images_list if img]
-    
     if title:
-        product_data = {
-            "id": product_id_counter,
-            "title": title,
-            "price": price,
-            "quantity": quantity,
-            "description": description,
-            "contact_type": contact_type,
-            "contact_value": contact_value,
-            "images": images_list,
-            "is_sold": False
-        }
-        products.insert(0, product_data)
+        products.insert(0, {
+            "id": product_id_counter, "title": title, "price": price, "quantity": quantity,
+            "description": description, "contact_type": "phone", "contact_value": "",
+            "images": [img for img in images_list if img], "is_sold": False
+        })
         product_id_counter += 1
     return redirect(url_for('admin'))
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    global ADMIN_PASSWORD, current_html_template
-    authorized = False
-    error = False
-    if request.method == 'POST':
-        if request.form.get('password') == ADMIN_PASSWORD:
-            authorized = True
-        else:
-            error = True
-    return render_template_string(admin_template, products=products, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
 
 @app.route('/update-logo', methods=['POST'])
 def update_logo():
@@ -955,17 +886,16 @@ def update_logo():
     site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
     logo_file = request.files.get('logo_file')
     if logo_file and logo_file.filename != '':
-        compressed_logo = process_and_compress_image(logo_file)
-        if compressed_logo: 
-            site_controls['logo_image'] = compressed_logo
+        comp = process_and_compress_image(logo_file)
+        if comp: site_controls['logo_image'] = comp
     return redirect(url_for('admin'))
 
 @app.route('/update-controls', methods=['POST'])
 def update_controls():
     global site_controls
+    site_controls['enable_auctions'] = True if request.form.get('enable_auctions') == 'on' else False
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
     site_controls['enable_socials'] = True if request.form.get('enable_socials') == 'on' else False
     site_controls['enable_copyright'] = True if request.form.get('enable_copyright') == 'on' else False
     site_controls['enable_reviews_page'] = True if request.form.get('enable_reviews_page') == 'on' else False
@@ -980,31 +910,6 @@ def update_texts():
         text_visibility[key] = True if request.form.get(f'vis_{key}') == 'on' else False
     return redirect(url_for('admin'))
 
-@app.route('/update-socials', methods=['POST'])
-def update_socials():
-    global site_controls
-    s1_name, s1_url = request.form.get('s1_name', '').strip(), request.form.get('s1_url', '').strip()
-    s2_name, s2_url = request.form.get('s2_name', '').strip(), request.form.get('s2_url', '').strip()
-    new_links = []
-    if s1_name and s1_url: new_links.append({"name": s1_name, "url": s1_url})
-    if s2_name and s2_url: new_links.append({"name": s2_name, "url": s2_url})
-    site_controls['social_links'] = new_links
-    return redirect(url_for('admin'))
-
-@app.route('/update-copyright', methods=['POST'])
-def update_copyright():
-    global site_controls
-    text = request.form.get('copyright_text', '').strip()
-    if text: site_controls['copyright_text'] = text
-    return redirect(url_for('admin'))
-
-@app.route('/update-password', methods=['POST'])
-def update_password():
-    global ADMIN_PASSWORD
-    new_pwd = request.form.get('new_password', '').strip()
-    if new_pwd: ADMIN_PASSWORD = new_pwd
-    return redirect(url_for('admin'))
-
 @app.route('/update-config', methods=['POST'])
 def update_config():
     global site_config
@@ -1013,11 +918,10 @@ def update_config():
     for key in site_config['colors']:
         val = request.form.get(f'c_{key}')
         if val: site_config['colors'][key] = val
-    if request.form.get('remove_bg_image') == 'on': site_config['bg_image'] = ""
     bg_file = request.files.get('bg_image_file')
     if bg_file and bg_file.filename != '':
-        compressed_bg = process_and_compress_image(bg_file)
-        if compressed_bg: site_config['bg_image'] = compressed_bg
+        comp_bg = process_and_compress_image(bg_file)
+        if comp_bg: site_config['bg_image'] = comp_bg
     return redirect(url_for('admin'))
 
 @app.route('/delete/<int:p_id>', methods=['POST'])
@@ -1032,6 +936,18 @@ def toggle_sold(p_id):
     for p in products:
         if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
     return redirect(url_for('admin'))
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin():
+    global ADMIN_PASSWORD, current_html_template
+    authorized = False
+    error = False
+    if request.method == 'POST':
+        if request.form.get('password') == ADMIN_PASSWORD:
+            authorized = True
+        else:
+            error = True
+    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
