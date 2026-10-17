@@ -372,6 +372,7 @@ default_html_template = """
 </body>
 </html>
 """
+
 auction_detail_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -527,6 +528,7 @@ copyright_template = """
 """
 
 current_html_template = default_html_template
+
 admin_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -796,153 +798,4 @@ def product_detail(p_id):
 
 @app.route('/copyright')
 def copyright_page():
-    if not site_controls['enable_copyright']: return redirect(url_for('index'))
-    return render_template_string(copyright_template, text=site_controls['copyright_text'])
-
-@app.route('/update-code', methods=['POST'])
-def update_code():
-    global current_html_template
-    new_code = request.form.get('custom_html', '').strip()
-    if new_code: current_html_template = new_code
-    return redirect(url_for('admin'))
-
-@app.route('/add-review', methods=['POST'])
-def add_review():
-    global review_id_counter, reviews
-    name = request.form.get('reviewer_name', '').strip()
-    comment = request.form.get('reviewer_comment', '').strip()
-    if name and comment:
-        reviews.insert(0, {"id": review_id_counter, "name": name, "comment": comment})
-        review_id_counter += 1
-    return redirect(url_for('reviews_page'))
-
-@app.route('/delete-review/<int:r_id>', methods=['POST'])
-def delete_review(r_id):
-    global reviews
-    reviews = [r for r in reviews if r['id'] != r_id]
-    return redirect(url_for('admin'))
-
-@app.route('/add-note', methods=['POST'])
-def add_note():
-    global note_id_counter
-    title = request.form.get('note_title', '').strip()
-    content = request.form.get('note_content', '').strip()
-    images_list = [process_and_compress_image(f) for f in request.files.getlist('note_images') if f and f.filename != '']
-    if title and content:
-        notes.insert(0, {"id": note_id_counter, "title": title, "content": content, "images": [img for img in images_list if img]})
-        note_id_counter += 1
-    return redirect(url_for('admin'))
-
-@app.route('/delete-note/<int:n_id>', methods=['POST'])
-def delete_note(n_id):
-    global notes
-    notes = [n for n in notes if n['id'] != n_id]
-    return redirect(url_for('admin'))
-
-@app.route('/add', methods=['POST'])
-def add_product():
-    global product_id_counter
-    if site_controls['block_posting']: return redirect(url_for('index'))
-    title = request.form.get('title')
-    price = request.form.get('price', '')
-    quantity = request.form.get('quantity', '1').strip()
-    description = request.form.get('description', '').strip()
-    images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
-    if title:
-        products.insert(0, {
-            "id": product_id_counter, "title": title, "price": price, "quantity": quantity,
-            "description": description, "contact_type": "phone", "contact_value": "",
-            "images": [img for img in images_list if img], "is_sold": False
-        })
-        product_id_counter += 1
-    return redirect(url_for('index'))
-
-@app.route('/admin-add-product', methods=['POST'])
-def admin_add_product():
-    global product_id_counter
-    title = request.form.get('title')
-    price = request.form.get('price', '')
-    quantity = request.form.get('quantity', '1').strip()
-    description = request.form.get('description', '').strip()
-    images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
-    if title:
-        products.insert(0, {
-            "id": product_id_counter, "title": title, "price": price, "quantity": quantity,
-            "description": description, "contact_type": "phone", "contact_value": "",
-            "images": [img for img in images_list if img], "is_sold": False
-        })
-        product_id_counter += 1
-    return redirect(url_for('admin'))
-
-@app.route('/update-logo', methods=['POST'])
-def update_logo():
-    global site_controls
-    site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
-    logo_file = request.files.get('logo_file')
-    if logo_file and logo_file.filename != '':
-        comp = process_and_compress_image(logo_file)
-        if comp: site_controls['logo_image'] = comp
-    return redirect(url_for('admin'))
-
-@app.route('/update-controls', methods=['POST'])
-def update_controls():
-    global site_controls
-    site_controls['enable_auctions'] = True if request.form.get('enable_auctions') == 'on' else False
-    site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
-    site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_socials'] = True if request.form.get('enable_socials') == 'on' else False
-    site_controls['enable_copyright'] = True if request.form.get('enable_copyright') == 'on' else False
-    site_controls['enable_reviews_page'] = True if request.form.get('enable_reviews_page') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-texts', methods=['POST'])
-def update_texts():
-    global site_config, text_visibility
-    for key in site_config['texts']:
-        form_txt = request.form.get(f'txt_{key}')
-        if form_txt: site_config['texts'][key] = form_txt
-        text_visibility[key] = True if request.form.get(f'vis_{key}') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-config', methods=['POST'])
-def update_config():
-    global site_config
-    site_config['title'] = request.form.get('title', site_config['title'])
-    site_config['subtitle'] = request.form.get('subtitle', site_config['subtitle'])
-    for key in site_config['colors']:
-        val = request.form.get(f'c_{key}')
-        if val: site_config['colors'][key] = val
-    bg_file = request.files.get('bg_image_file')
-    if bg_file and bg_file.filename != '':
-        comp_bg = process_and_compress_image(bg_file)
-        if comp_bg: site_config['bg_image'] = comp_bg
-    return redirect(url_for('admin'))
-
-@app.route('/delete/<int:p_id>', methods=['POST'])
-def delete_product(p_id):
-    global products
-    products = [p for p in products if p['id'] != p_id]
-    return redirect(url_for('admin'))
-
-@app.route('/toggle-sold/<int:p_id>', methods=['POST'])
-def toggle_sold(p_id):
-    global products
-    for p in products:
-        if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
-    return redirect(url_for('admin'))
-
-@app.route('/admin', methods=['GET', 'POST'])
-def admin():
-    global ADMIN_PASSWORD, current_html_template
-    authorized = False
-    error = False
-    if request.method == 'POST':
-        if request.form.get('password') == ADMIN_PASSWORD:
-            authorized = True
-        else:
-            error = True
-    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(0.0.0.0, port=port)
+    if not site_control
