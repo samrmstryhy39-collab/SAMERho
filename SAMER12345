@@ -17,7 +17,9 @@ site_controls = {
     "enable_search": True,
     "enable_socials": True,       
     "enable_copyright": True,
-    "enable_contact_btn": True,   
+    "enable_contact_btn": True,
+    "use_logo_image": False,      # تفعيل صورة الشعار أو النص
+    "logo_image": "",             # مسار/بيانات صورة الشعار
     "social_links": [
         {"name": "إنستغرام", "url": "#"},
         {"name": "تيليجرام", "url": "#"}
@@ -80,7 +82,7 @@ site_config = {
         "logo_border": "#ffffff",          
         "products_heading": "#ffffff",     
         "no_products": "#777777",          
-        "product_bg": "#111111",           # لون خلفية بطاقة المنتج الجديدة
+        "product_bg": "#111111",           
         "product_title": "#ffffff",        
         "product_price": "#25d366",        
         "whatsapp_btn": "#25d366",         
@@ -163,6 +165,16 @@ html_template = """
             box-shadow: 0 0 20px {{ config.colors.logo_border }}66, inset 0 0 10px {{ config.colors.logo_border }}33;
             margin: 0;
         }
+        .logo-img-container img {
+            max-width: 220px;
+            max-height: 100px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 2px solid {{ config.colors.logo_border }};
+            background: {{ config.colors.logo_bg }};
+            padding: 5px;
+            box-shadow: 0 0 20px {{ config.colors.logo_border }}66;
+        }
         .header p {
             color: {{ config.colors.subtitle }};
             font-size: 13px;
@@ -217,6 +229,23 @@ html_template = """
             justify-content: space-between;
             text-decoration: none;
             transition: transform 0.2s;
+            position: relative;
+        }
+        .product-card.sold-card {
+            opacity: 0.65;
+        }
+        .sold-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #dc2626;
+            color: white;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 4px;
+            z-index: 2;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
         .product-card:hover {
             transform: scale(1.02);
@@ -278,6 +307,10 @@ html_template = """
             font-weight: bold;
             font-size: 11px;
             word-break: break-all;
+        }
+        .sold-btn-disabled {
+            background: #555 !important;
+            cursor: not-allowed;
         }
         .toggle-form-btn {
             background-color: {{ config.colors.toggle_btn }};
@@ -419,7 +452,13 @@ html_template = """
     </div>
 
     <div class="header">
-        <h1 class="glass-title">{{ config.title }}</h1>
+        {% if controls.use_logo_image and controls.logo_image %}
+            <div class="logo-img-container">
+                <img src="{{ controls.logo_image }}" alt="شعار الموقع">
+            </div>
+        {% else %}
+            <h1 class="glass-title">{{ config.title }}</h1>
+        {% endif %}
         <p>{{ config.subtitle }}</p>
     </div>
 
@@ -438,7 +477,10 @@ html_template = """
                 <p style="color: {{ config.colors.no_products }}; text-align: center; grid-column: 1 / -1; padding: 20px;" id="noProductsMsg">{{ config.texts.no_products }}</p>
             {% endif %}
             {% for p in products %}
-                <div class="product-card" data-title="{{ p.title }}">
+                <div class="product-card {% if p.is_sold %}sold-card{% endif %}" data-title="{{ p.title }}">
+                    {% if p.is_sold %}
+                        <div class="sold-badge">تم البيع</div>
+                    {% endif %}
                     <div class="product-images">
                         {% for img in p.images %}
                             <img src="{{ img }}" alt="صورة">
@@ -448,7 +490,11 @@ html_template = """
                         <div class="product-title" title="{{ p.title }}">{{ p.title }}</div>
                         <div class="product-price">{{ p.price }}</div>
                         {% if vis.view_details %}
-                        <a href="/product/{{ p.id }}" class="contact-btn">{{ config.texts.view_details }}</a>
+                            {% if p.is_sold %}
+                                <span class="contact-btn sold-btn-disabled">تم البيع</span>
+                            {% else %}
+                                <a href="/product/{{ p.id }}" class="contact-btn">{{ config.texts.view_details }}</a>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>
@@ -684,7 +730,7 @@ product_detail_template = """
             {% endfor %}
         </div>
 
-        {% if controls.enable_contact_btn %}
+        {% if controls.enable_contact_btn and not product.is_sold %}
             {% if product.contact_type == 'instagram' %}
                 <a class="contact-btn" href="https://instagram.com/{{ product.contact_value.replace('@', '') }}" target="_blank">
                     {% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}
@@ -694,6 +740,8 @@ product_detail_template = """
                     {% if vis.contact_word %}{{ config.texts.contact_word }}: {% endif %}{{ product.contact_value }}
                 </a>
             {% endif %}
+        {% elif product.is_sold %}
+            <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
         {% endif %}
 
         {% if vis.back_home %}
@@ -744,9 +792,14 @@ admin_template = """
         input[type="color"] { width: 50px; height: 32px; border: 1px solid #333333; border-radius: 6px; background: #000000; cursor: pointer; padding: 0; vertical-align: middle; }
         button { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; background: #25d366; color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.3s; font-size: 15px; }
         button:hover { background: #1ebd56; }
-        .product-row { display: flex; justify-content: space-between; align-items: center; background: #000000; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #222222; }
-        .delete-btn { background: #dc2626; color: white; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; width: auto; margin: 0; font-size: 13px; }
+        .product-row { display: flex; justify-content: space-between; align-items: center; background: #000000; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #222222; gap: 10px; }
+        .product-actions { display: flex; gap: 8px; align-items: center; }
+        .delete-btn { background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
         .delete-btn:hover { background: #b91c1c; }
+        .sold-btn { background: #d97706; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .sold-btn:hover { background: #b45309; }
+        .unsold-btn { background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+        .unsold-btn:hover { background: #1d4ed8; }
         .back-link { display: block; text-align: center; margin-top: 20px; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; }
         .section-box { border-top: 1px solid #222222; margin-top: 25px; padding-top: 20px; }
         .row-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #000000; padding: 6px 10px; border-radius: 6px; border: 1px solid #222222; }
@@ -772,6 +825,19 @@ admin_template = """
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
+            <div class="section-box">
+                <h3>🖼️ إدارة شعار الموقع (صورة أو نص)</h3>
+                <form action="/update-logo" method="POST" enctype="multipart/form-data">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}>
+                        تفعيل وعرض صورة الشعار بدلاً من اسم الموقع النصي
+                    </label>
+                    <label style="margin-top: 10px;">اختر صورة الشعار من الجهاز:</label>
+                    <input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
+                    <button type="submit">حفظ إعدادات الشعار</button>
+                </form>
+            </div>
+
             <div class="section-box">
                 <h3>➕ إضافة منتج جديد (خاص بالمسؤول)</h3>
                 <form action="/admin-add-product" method="POST" enctype="multipart/form-data">
@@ -900,7 +966,7 @@ admin_template = """
             <div class="section-box">
                 <h3>تعديل واجهة وألوان الموقع</h3>
                 <form action="/update-config" method="POST" enctype="multipart/form-data">
-                    <label>اسم الموقع:</label>
+                    <label>اسم الموقع (الاحتياطي):</label>
                     <input type="text" name="title" value="{{ config.title }}" required>
                     
                     <label>شعار / وصف الموقع:</label>
@@ -929,7 +995,7 @@ admin_template = """
                         <input type="color" name="c_logo_bg" value="{{ config.colors.logo_bg }}">
                     </div>
                     <div class="row-item">
-                        <span>إطار وتوهج مربع الشعار (Atiq):</span>
+                        <span>إطار وتوهج مربع الشعار:</span>
                         <input type="color" name="c_logo_border" value="{{ config.colors.logo_border }}">
                     </div>
                     <div class="row-item">
@@ -986,17 +1052,28 @@ admin_template = """
             </div>
 
             <div class="section-box">
-                <h3>قائمة المنتجات (للحذف)</h3>
+                <h3>قائمة المنتجات (الإدارة، البيع والحذف)</h3>
                 <div>
                     {% if products|length == 0 %}
                         <p style="color: #888888; text-align: center; padding: 15px;">لا توجد منتجات مسجلة حالياً.</p>
                     {% endif %}
                     {% for p in products %}
                         <div class="product-row">
-                            <span><b>{{ p.title }}</b> ({{ p.price }})</span>
-                            <form action="/delete/{{ p.id }}" method="POST" style="margin:0;">
-                                <button type="submit" class="delete-btn">حذف</button>
-                            </form>
+                            <span><b>{{ p.title }}</b> ({{ p.price }}) {% if p.is_sold %}<span style="color: #dc2626;">[تم البيع]</span>{% endif %}</span>
+                            <div class="product-actions">
+                                {% if p.is_sold %}
+                                    <form action="/toggle-sold/{{ p.id }}" method="POST" style="margin:0;">
+                                        <button type="submit" class="unsold-btn">إلغاء البيع</button>
+                                    </form>
+                                {% else %}
+                                    <form action="/toggle-sold/{{ p.id }}" method="POST" style="margin:0;">
+                                        <button type="submit" class="sold-btn">تم البيع</button>
+                                    </form>
+                                {% endif %}
+                                <form action="/delete/{{ p.id }}" method="POST" style="margin:0;">
+                                    <button type="submit" class="delete-btn">حذف</button>
+                                </form>
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
@@ -1009,20 +1086,14 @@ admin_template = """
 """
 
 def process_and_compress_image(image_file):
-    """تقوم بفتح الصورة، تصغير أبعادها بحد أقصى 800 بكسل، وتقليل جودتها لتصبح خفيفة جداً"""
     try:
         img = Image.open(image_file)
         if img.mode in ("RGBA", "P"):
             img = img.convert("RGB")
-        
-        # تصغير الأبعاد الكبيرة للحفاظ على السرعة
         img.thumbnail((800, 800))
-        
-        # ضغط وحفظ بصيغة JPEG بجودة مناسبة وسريعة
         buffer = BytesIO()
         img.save(buffer, format="JPEG", quality=75)
         image_bytes = buffer.getvalue()
-        
         image_base64 = base64.b64encode(image_bytes).decode('utf-8')
         return f"data:image/jpeg;base64,{image_base64}"
     except Exception:
@@ -1071,7 +1142,8 @@ def add_product():
             "price": price, 
             "contact_type": contact_type,
             "contact_value": contact_value,
-            "images": images_list
+            "images": images_list,
+            "is_sold": False
         })
         product_id_counter += 1
         
@@ -1100,7 +1172,8 @@ def admin_add_product():
             "price": price, 
             "contact_type": contact_type,
             "contact_value": contact_value,
-            "images": images_list
+            "images": images_list,
+            "is_sold": False
         })
         product_id_counter += 1
         
@@ -1119,87 +1192,7 @@ def admin():
             error = True
     return render_template_string(admin_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error)
 
-@app.route('/update-controls', methods=['POST'])
-def update_controls():
+@app.route('/update-logo', methods=['POST'])
+def update_logo():
     global site_controls
-    site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
-    site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
-    site_controls['enable_socials'] = True if request.form.get('enable_socials') == 'on' else False
-    site_controls['enable_copyright'] = True if request.form.get('enable_copyright') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-texts', methods=['POST'])
-def update_texts():
-    global site_config, text_visibility
-    for key in site_config['texts']:
-        form_txt = request.form.get(f'txt_{key}')
-        if form_txt:
-            site_config['texts'][key] = form_txt
-        text_visibility[key] = True if request.form.get(f'vis_{key}') == 'on' else False
-    return redirect(url_for('admin'))
-
-@app.route('/update-socials', methods=['POST'])
-def update_socials():
-    global site_controls
-    s1_name = request.form.get('s1_name', '').strip()
-    s1_url = request.form.get('s1_url', '').strip()
-    s2_name = request.form.get('s2_name', '').strip()
-    s2_url = request.form.get('s2_url', '').strip()
-    
-    new_links = []
-    if s1_name and s1_url:
-        new_links.append({"name": s1_name, "url": s1_url})
-    if s2_name and s2_url:
-        new_links.append({"name": s2_name, "url": s2_url})
-        
-    site_controls['social_links'] = new_links
-    return redirect(url_for('admin'))
-
-@app.route('/update-copyright', methods=['POST'])
-def update_copyright():
-    global site_controls
-    text = request.form.get('copyright_text', '').strip()
-    if text:
-        site_controls['copyright_text'] = text
-    return redirect(url_for('admin'))
-
-@app.route('/update-password', methods=['POST'])
-def update_password():
-    global ADMIN_PASSWORD
-    new_pwd = request.form.get('new_password', '').strip()
-    if new_pwd:
-        ADMIN_PASSWORD = new_pwd
-    return redirect(url_for('admin'))
-
-@app.route('/update-config', methods=['POST'])
-def update_config():
-    global site_config
-    site_config['title'] = request.form.get('title', site_config['title'])
-    site_config['subtitle'] = request.form.get('subtitle', site_config['subtitle'])
-    
-    for key in site_config['colors']:
-        form_val = request.form.get(f'c_{key}')
-        if form_val:
-            site_config['colors'][key] = form_val
-    
-    if request.form.get('remove_bg_image') == 'on':
-        site_config['bg_image'] = ""
-
-    bg_file = request.files.get('bg_image_file')
-    if bg_file and bg_file.filename != '':
-        compressed_bg = process_and_compress_image(bg_file)
-        if compressed_bg:
-            site_config['bg_image'] = compressed_bg
-        
-    return redirect(url_for('admin'))
-
-@app.route('/delete/<int:p_id>', methods=['POST'])
-def delete_product(p_id):
-    global products
-    products = [p for p in products if p['id'] != p_id]
-    return redirect(url_for('admin'))
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else
