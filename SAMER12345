@@ -750,6 +750,12 @@ admin_template = """
         .collapsible-header { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 14px 18px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-top: 15px; user-select: none; }
         .collapsible-header:hover { background: #222; color: #25d366; }
         .collapsible-content { display: none; background: #0a0a0a; border: 1px solid #222; border-top: none; padding: 15px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-bottom: 15px; }
+        
+        /* أداة معاينة وقص الشعار */
+        .crop-container { width: 100%; height: 220px; background: #000; border: 2px dashed #444; border-radius: 8px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
+        .crop-container img { max-width: none; cursor: grab; position: absolute; transform-origin: center; }
+        .crop-controls { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; justify-content: center; }
+        .crop-controls button { width: auto; padding: 8px 15px; margin: 0; background: #333; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -765,7 +771,22 @@ admin_template = """
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
-            <!-- 1. قائمة منسدلة: رقم الواتساب -->
+            <!-- 1. قائمة منسدلة: تغيير كلمة مرور لوحة التحكم -->
+            <div class="collapsible-header" onclick="toggleSection('sec_password')">
+                <span>🔑 تغيير رمز مرور لوحة التحكم</span>
+                <span id="icon-sec_password">▼</span>
+            </div>
+            <div id="sec_password" class="collapsible-content">
+                <form action="/update-password" method="POST">
+                    <label>رمز المرور الحالي:</label>
+                    <input type="password" name="current_password" placeholder="أدخل الرمز الحالي" required>
+                    <label>رمز المرور الجديد:</label>
+                    <input type="password" name="new_password" placeholder="أدخل الرمز الجديد" required>
+                    <button type="submit" style="background: #dc2626;">تحديث رمز المرور</button>
+                </form>
+            </div>
+
+            <!-- 2. قائمة منسدلة: رقم الواتساب -->
             <div class="collapsible-header" onclick="toggleSection('sec_wa')">
                 <span>📱 رقم الواتساب الخاص بك (لتلقي الطلبات والمزادات)</span>
                 <span id="icon-sec_wa">▼</span>
@@ -778,7 +799,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 2. قائمة منسدلة: إدارة الخصائص والميزات العامة -->
+            <!-- 3. قائمة منسدلة: إدارة الخصائص والميزات العامة -->
             <div class="collapsible-header" onclick="toggleSection('sec1')">
                 <span>⚙️ إدارة الخصائص والميزات العامة</span>
                 <span id="icon-sec1">▼</span>
@@ -797,7 +818,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 3. قائمة منسدلة: إدارة النصوص والظهور -->
+            <!-- 4. قائمة منسدلة: إدارة النصوص والظهور -->
             <div class="collapsible-header" onclick="toggleSection('sec2')">
                 <span>📝 إدارة النصوص والظهور</span>
                 <span id="icon-sec2">▼</span>
@@ -816,7 +837,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 4. قائمة منسدلة: تعديل الألوان والتصميم وخلفية الموقع -->
+            <!-- 5. قائمة منسدلة: تعديل الألوان والتصميم وخلفية الموقع -->
             <div class="collapsible-header" onclick="toggleSection('sec3')">
                 <span>🎨 تعديل الألوان والتصميم وخلفية الموقع</span>
                 <span id="icon-sec3">▼</span>
@@ -836,7 +857,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 5. قائمة منسدلة: إدارة وإطلاق المزادات -->
+            <!-- 6. قائمة منسدلة: إدارة وإطلاق المزادات -->
             <div class="collapsible-header" onclick="toggleSection('sec_auctions')">
                 <span>🔨 إدارة وإطلاق المزادات</span>
                 <span id="icon-sec_auctions">▼</span>
@@ -876,7 +897,7 @@ admin_template = """
                 </div>
             </div>
 
-            <!-- 6. قائمة منسدلة: محرر الكود الداخلي -->
+            <!-- 7. قائمة منسدلة: محرر الكود الداخلي -->
             <div class="collapsible-header" onclick="toggleSection('sec_code')">
                 <span>💻 محرر الكود الداخلي</span>
                 <span id="icon-sec_code">▼</span>
@@ -888,7 +909,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 7. قائمة منسدلة: إدارة وحذف آراء العملاء -->
+            <!-- 8. قائمة منسدلة: إدارة وحذف آراء العملاء -->
             <div class="collapsible-header" onclick="toggleSection('sec_reviews')">
                 <span>⭐ إدارة وحذف آراء العملاء</span>
                 <span id="icon-sec_reviews">▼</span>
@@ -903,7 +924,7 @@ admin_template = """
                 {% endfor %}
             </div>
 
-            <!-- 8. قائمة منسدلة: مفكرة الأفكار والملاحظات -->
+            <!-- 9. قائمة منسدلة: مفكرة الأفكار والملاحظات -->
             <div class="collapsible-header" onclick="toggleSection('sec_notes')">
                 <span>💡 مفكرة الأفكار والملاحظات</span>
                 <span id="icon-sec_notes">▼</span>
@@ -928,20 +949,35 @@ admin_template = """
                 </div>
             </div>
 
-            <!-- 9. قائمة منسدلة: إدارة شعار الموقع -->
+            <!-- 10. قائمة منسدلة: إدارة شعار الموقع مع أداة معاينة وقص -->
             <div class="collapsible-header" onclick="toggleSection('sec_logo')">
-                <span>🖼️ إدارة شعار الموقع</span>
+                <span>🖼️ إدارة ومعاينة وقص شعار الموقع</span>
                 <span id="icon-sec_logo">▼</span>
             </div>
             <div id="sec_logo" class="collapsible-content">
-                <form action="/update-logo" method="POST" enctype="multipart/form-data">
-                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار</label>
-                    <input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
-                    <button type="submit">حفظ الشعار</button>
+                <form action="/update-logo" method="POST">
+                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار في الموقع</label>
+                    
+                    <label>اختر صورة الشعار:</label>
+                    <input type="file" id="logoInputFile" accept="image/*" style="color: #fff; margin-bottom: 10px;" onchange="initCropper(event)">
+                    
+                    <!-- أداة المعاينة والتحريك والتقريب -->
+                    <div class="crop-container" id="cropContainer" style="display: none;">
+                        <img id="cropperImage" alt="معاينة">
+                    </div>
+                    
+                    <div class="crop-controls" id="cropControls" style="display: none;">
+                        <button type="button" onclick="zoomImage(0.1)">➕ تقريب</button>
+                        <button type="button" onclick="zoomImage(-0.1)">➖ إبعاد</button>
+                        <button type="button" onclick="resetCrop()">🔄 إعادة ضبط</button>
+                    </div>
+
+                    <input type="hidden" name="cropped_logo_data" id="croppedLogoData">
+                    <button type="submit" style="background: #25d366; margin-top: 10px;">تأكيد وحفظ الشعار المقصوص ✅</button>
                 </form>
             </div>
 
-            <!-- هذا القسم (إضافة منتج جديد) تركناه ظاهراً مباشرة بدون قائمة منسدلة كما طلبت -->
+            <!-- إضافة منتج جديد (ظاهر مباشرة بدون قائمة) -->
             <div class="section-box">
                 <h3>➕ إضافة منتج جديد</h3>
                 <form action="/admin-add-product" method="POST" enctype="multipart/form-data">
@@ -954,7 +990,7 @@ admin_template = """
                 </form>
             </div>
 
-            <!-- 10. قائمة منسدلة: قائمة المنتجات الحالية -->
+            <!-- 11. قائمة منسدلة: قائمة المنتجات الحالية -->
             <div class="collapsible-header" onclick="toggleSection('sec_products')">
                 <span>📦 قائمة المنتجات الحالية</span>
                 <span id="icon-sec_products">▼</span>
@@ -985,6 +1021,87 @@ admin_template = """
                 content.style.display = 'block';
                 icon.innerText = '▲';
             }
+        }
+
+        // سكريبت معاينة وتحريك وتقريب وقص الشعار
+        let imgObj = new Image();
+        let scale = 1;
+        let posX = 0, posY = 0;
+        let isDragging = false;
+        let startX, startY;
+
+        function initCropper(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imgObj.src = e.target.result;
+                imgObj.onload = function() {
+                    document.getElementById('cropContainer').style.display = 'flex';
+                    document.getElementById('cropControls').style.display = 'flex';
+                    const cImg = document.getElementById('cropperImage');
+                    cImg.src = imgObj.src;
+                    scale = 1;
+                    posX = 0;
+                    posY = 0;
+                    updateTransform();
+                }
+            }
+            reader.readAsDataURL(file);
+        }
+
+        const cImg = document.getElementById('cropperImage');
+        const container = document.getElementById('cropContainer');
+
+        if(cImg) {
+            cImg.addEventListener('mousedown', startDrag);
+            cImg.addEventListener('touchstart', startDragTouch);
+            window.addEventListener('mousemove', drag);
+            window.addEventListener('touchmove', dragTouch);
+            window.addEventListener('mouseup', endDrag);
+            window.addEventListener('touchend', endDrag);
+        }
+
+        function startDrag(e) { isDragging = true; startX = e.clientX - posX; startY = e.clientY - posY; e.preventDefault(); }
+        function startDragTouch(e) { if(e.touches.length === 1) { isDragging = true; startX = e.touches[0].clientX - posX; startY = e.touches[0].clientY - posY; } }
+        function drag(e) { if (!isDragging) return; posX = e.clientX - startX; posY = e.clientY - startY; updateTransform(); }
+        function dragTouch(e) { if (!isDragging || e.touches.length !== 1) return; posX = e.touches[0].clientX - startX; posY = e.touches[0].clientY - startY; updateTransform(); }
+        function endDrag() { isDragging = false; prepareCroppedImage(); }
+
+        function zoomImage(delta) {
+            scale += delta;
+            if(scale < 0.2) scale = 0.2;
+            updateTransform();
+            prepareCroppedImage();
+        }
+
+        function resetCrop() {
+            scale = 1;
+            posX = 0;
+            posY = 0;
+            updateTransform();
+            prepareCroppedImage();
+        }
+
+        function updateTransform() {
+            cImg.style.transform = `translate(${posX}px, ${posY}px) scale(${scale})`;
+        }
+
+        function prepareCroppedImage() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 120;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.save();
+            ctx.translate(canvas.width / 2 + posX, canvas.height / 2 + posY);
+            ctx.scale(scale, scale);
+            ctx.drawImage(imgObj, -imgObj.width / 2, -imgObj.height / 2);
+            ctx.restore();
+
+            document.getElementById('croppedLogoData').value = canvas.toDataURL('image/jpeg', 0.85);
         }
     </script>
 </body>
@@ -1166,6 +1283,15 @@ def update_admin_whatsapp():
         site_controls['admin_whatsapp'] = whatsapp
     return redirect(url_for('admin'))
 
+@app.route('/update-password', methods=['POST'])
+def update_password():
+    global ADMIN_PASSWORD
+    current_pass = request.form.get('current_password', '')
+    new_pass = request.form.get('new_password', '').strip()
+    if current_pass == ADMIN_PASSWORD and new_pass:
+        ADMIN_PASSWORD = new_pass
+    return redirect(url_for('admin'))
+
 @app.route('/admin-add-auction', methods=['POST'])
 def admin_add_auction():
     global auction_id_counter, auctions
@@ -1301,10 +1427,9 @@ def admin_add_product():
 def update_logo():
     global site_controls
     site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
-    logo_file = request.files.get('logo_file')
-    if logo_file and logo_file.filename != '':
-        comp = process_and_compress_image(logo_file)
-        if comp: site_controls['logo_image'] = comp
+    cropped_data = request.form.get('cropped_logo_data', '')
+    if cropped_data:
+        site_controls['logo_image'] = cropped_data
     return redirect(url_for('admin'))
 
 @app.route('/update-controls', methods=['POST'])
