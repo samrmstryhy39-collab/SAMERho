@@ -398,7 +398,7 @@ admin_template = """
     <title>لوحة الإعدادات والتحكم</title>
     <style>
         body { background: #000; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; width: 100%; max-width: 650px; margin-top: 20px; }
+        .container { background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; width: 100%; max-width: 900px; margin-top: 20px; box-sizing: border-box; }
         h2, h3 { color: #fff; text-align: center; margin-bottom: 20px; }
         input[type="text"], input[type="password"], textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
         input[type="color"] { width: 50px; height: 32px; border: 1px solid #333; border-radius: 6px; background: #000; cursor: pointer; padding: 0; vertical-align: middle; }
@@ -436,7 +436,7 @@ admin_template = """
                 <h3>💻 محرر الكود الداخلي (لتعديل واجهة المتجر مباشرة)</h3>
                 <form action="/update-code" method="POST">
                     <label>كود HTML / CSS للواجهة الرئيسية:</label>
-                    <textarea name="custom_html" rows="10" style="font-family: monospace; font-size: 11px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
+                    <textarea name="custom_html" rows="16" style="font-family: monospace; font-size: 12px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
                     <button type="submit">حفظ وتحديث كود الواجهة</button>
                 </form>
             </div>
@@ -795,5 +795,4 @@ def update_controls():
     global site_controls
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
-    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
-    site_c
+    site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'o
