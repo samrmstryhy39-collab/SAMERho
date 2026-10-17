@@ -1191,6 +1191,10 @@ def admin():
         else:
             error = True
     return render_template_string(admin_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error)
+
 @app.route('/update-logo', methods=['POST'])
 def update_logo():
-    return redirect(url_for('admin'))
+    global site_controls
+    use_logo = request.form.get('use_logo_image')
+    site_controls['use_logo_image'] = True if use_logo else False
+    logo_file = request.files.get('logo_fil
