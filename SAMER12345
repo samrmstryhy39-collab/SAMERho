@@ -23,6 +23,7 @@ site_controls = {
     "enable_socials": True,       
     "enable_copyright": True,
     "enable_contact_btn": True,   
+    "enable_reviews_page": True,  # تفعيل صفحة آراء العملاء المستقلة
     "use_logo_image": False,
     "logo_image": "",
     "social_links": [
@@ -136,7 +137,7 @@ default_html_template = """
     <style>
         body { background-color: {{ config.colors.bg_color }}; {% if config.bg_image %}background-image: url('{{ config.bg_image }}'); background-size: cover; background-position: center; background-attachment: fixed; {% endif %} font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
         {% if config.bg_image %}body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: -1; }{% endif %}
-        .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; margin-bottom: 15px; }
+        .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px; }
         .settings-btn { background: #1e1e1e; border: 1px solid #444; padding: 8px 16px; border-radius: 8px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; }
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
@@ -167,13 +168,6 @@ default_html_template = """
         .file-upload { border: 2px dashed #25d366; border-radius: 8px; padding: 15px; text-align: center; background: rgba(37, 211, 102, 0.03); cursor: pointer; margin-bottom: 10px; color: {{ config.colors.upload_text }}; font-size: 13px; }
         .submit-btn { background-color: {{ config.colors.submit_btn }}; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 10px; border-radius: 8px; text-align: center; font-size: 13px; margin-bottom: 15px; }
-        
-        .reviews-section { width: 100%; max-width: 900px; margin-top: 30px; background: #111; border: 1px solid #222; border-radius: 12px; padding: 20px; box-sizing: border-box; }
-        .reviews-title { color: #ff5252; text-align: center; margin-bottom: 20px; font-size: 18px; }
-        .review-card { background: #000; padding: 12px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; }
-        .review-card p { color: #fff; font-size: 13px; margin: 0 0 5px 0; }
-        .review-card span { color: #25d366; font-size: 11px; font-weight: bold; }
-        .add-review-form { margin-top: 20px; border-top: 1px solid #222; padding-top: 15px; }
 
         .site-footer { width: 100%; max-width: 900px; margin-top: 40px; padding: 20px 0; border-top: 1px solid #222; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
         .footer-socials { display: flex; gap: 15px; flex-wrap: wrap; justify-content: center; }
@@ -182,7 +176,10 @@ default_html_template = """
     </style>
 </head>
 <body>
-    <div class="top-bar"><a href="/admin" class="settings-btn">الإعدادات</a></div>
+    <div class="top-bar">
+        {% if controls.enable_reviews_page %}<a href="/reviews" class="settings-btn" style="background: #111; border-color: #25d366; color: #25d366;">⭐ آراء العملاء</a>{% endif %}
+        <a href="/admin" class="settings-btn">الإعدادات</a>
+    </div>
     <div class="header">
         {% if controls.use_logo_image and controls.logo_image %}
             <div class="logo-img-container"><img src="{{ controls.logo_image }}" alt="شعار الموقع"></div>
@@ -259,25 +256,6 @@ default_html_template = """
     </div>
     {% endif %}
 
-    <div class="reviews-section">
-        <h3 class="reviews-title">⭐ آراء العملاء</h3>
-        {% for r in reviews %}
-            <div class="review-card">
-                <p>"{{ r.comment }}"</p>
-                <span>- {{ r.name }}</span>
-            </div>
-        {% endfor %}
-        
-        <div class="add-review-form">
-            <h4 style="color: #fff; font-size: 14px; margin-bottom: 10px; text-align: right;">أضف رأيك بكل تجربة:</h4>
-            <form action="/add-review" method="POST">
-                <input type="text" name="reviewer_name" placeholder="اسمك الكريم" required style="width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none;">
-                <textarea name="reviewer_comment" rows="2" placeholder="اكتب رأيك هنا..." required style="width: 100%; padding: 10px; margin-bottom: 8px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none;"></textarea>
-                <button type="submit" style="background: #25d366; color: white; border: none; padding: 8px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; width: 100%;">نشر الرأي</button>
-            </form>
-        </div>
-    </div>
-
     {% if controls.enable_socials or controls.enable_copyright %}
     <footer class="site-footer">
         {% if controls.enable_socials and controls.social_links|length > 0 %}
@@ -309,6 +287,50 @@ default_html_template = """
             }
         }
     </script>
+</body>
+</html>
+"""
+
+reviews_page_template = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>آراء العملاء - {{ config.title }}</title>
+    <style>
+        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .box { background: #111; border: 1px solid #222; padding: 25px; border-radius: 12px; width: 100%; max-width: 650px; margin-top: 20px; box-sizing: border-box; }
+        h1 { color: #ff5252; text-align: center; font-size: 20px; margin-bottom: 20px; }
+        .review-card { background: #000; padding: 12px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; }
+        .review-card p { color: #fff; font-size: 13px; margin: 0 0 5px 0; }
+        .review-card span { color: #25d366; font-size: 11px; font-weight: bold; }
+        .add-review-form { margin-top: 25px; border-top: 1px solid #222; padding-top: 20px; }
+        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 12px; border-radius: 8px; background: #25d366; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .back { display: block; text-align: center; margin-top: 25px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>⭐ آراء العملاء وتجاربهم</h1>
+        {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 15px; font-size: 13px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
+        {% for r in reviews %}
+            <div class="review-card">
+                <p>"{{ r.comment }}"</p>
+                <span>- {{ r.name }}</span>
+            </div>
+        {% endfor %}
+        
+        <div class="add-review-form">
+            <h3 style="color: #fff; font-size: 15px; margin-bottom: 12px; text-align: right;">أضف رأيك وتجربتك معنا:</h3>
+            <form action="/add-review" method="POST">
+                <input type="text" name="reviewer_name" placeholder="اسمك الكريم" required>
+                <textarea name="reviewer_comment" rows="3" placeholder="اكتب رأيك هنا..." required></textarea>
+                <button type="submit">نشر الرأي</button>
+            </form>
+        </div>
+        <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
+    </div>
 </body>
 </html>
 """
@@ -440,7 +462,7 @@ admin_template = """
             </div>
 
             <div class="section-box">
-                <h3>⭐ إدارة وعرض آراء العملاء</h3>
+                <h3>⭐ إدارة وحذف آراء العملاء</h3>
                 {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 10px; font-size: 12px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
                 {% for r in reviews %}
                     <div class="product-row">
@@ -532,6 +554,7 @@ admin_template = """
                     <label class="checkbox-label"><input type="checkbox" name="enable_contact_btn" {% if controls.enable_contact_btn %}checked{% endif %}> تفعيل وعرض زر ورقم/طريقة التواصل في صفحة تفاصيل المنتج</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_socials" {% if controls.enable_socials %}checked{% endif %}> تفعيل وعرض حسابات التواصل الاجتماعي في أسفل المتجر</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_copyright" {% if controls.enable_copyright %}checked{% endif %}> تفعيل وعرض صفحة وحقوق النشر في أسفل المتجر</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_reviews_page" {% if controls.enable_reviews_page %}checked{% endif %}> تفعيل وعرض زر وصفحة "آراء العملاء" للزوار</label>
                     <button type="submit" style="margin-top: 10px;">حفظ الخصائص العامة</button>
                 </form>
             </div>
@@ -641,7 +664,12 @@ def process_and_compress_image(image_file):
 @app.route('/')
 def index():
     global current_html_template
-    return render_template_string(current_html_template, products=products, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+    return render_template_string(current_html_template, products=products, config=site_config, controls=site_controls, vis=text_visibility, error=None)
+
+@app.route('/reviews')
+def reviews_page():
+    if not site_controls['enable_reviews_page']: return redirect(url_for('index'))
+    return render_template_string(reviews_page_template, reviews=reviews, config=site_config)
 
 @app.route('/product/<int:p_id>')
 def product_detail(p_id):
@@ -675,7 +703,7 @@ def add_review():
         }
         reviews.insert(0, review_data)
         review_id_counter += 1
-    return redirect(url_for('index'))
+    return redirect(url_for('reviews_page'))
 
 @app.route('/delete-review/<int:r_id>', methods=['POST'])
 def delete_review(r_id):
@@ -796,6 +824,7 @@ def update_controls():
     site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
     site_controls['enable_socials'] = True if request.form.get('enable_socials') == 'on' else False
     site_controls['enable_copyright'] = True if request.form.get('enable_copyright') == 'on' else False
+    site_controls['enable_reviews_page'] = True if request.form.get('enable_reviews_page') == 'on' else False
     return redirect(url_for('admin'))
 
 @app.route('/update-texts', methods=['POST'])
@@ -856,7 +885,7 @@ def delete_product(p_id):
 @app.route('/toggle-sold/<int:p_id>', methods=['POST'])
 def toggle_sold(p_id):
     global products
-    for p in products:
+    for p:
         if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
     return redirect(url_for('admin'))
 
