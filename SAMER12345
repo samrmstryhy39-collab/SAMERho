@@ -5,6 +5,7 @@ from io import BytesIO
 from PIL import Image
 from datetime import datetime, timedelta
 import urllib.parse
+import re
 
 app = Flask(__name__)
 app.secret_key = 'samemomomo_secret_key'
@@ -33,7 +34,7 @@ site_controls = {
     "enable_cart": True,
     "use_logo_image": False,
     "logo_image": "",
-    "admin_whatsapp": "962790000000",  # رقم الواتساب الخاص بك لتلقي تفاصيل المزايدات
+    "admin_whatsapp": "962790000000",
     "social_links": [
         {"name": "إنستغرام", "url": "#"},
         {"name": "تيليجرام", "url": "#"}
@@ -65,7 +66,11 @@ text_visibility = {
     "back_home": True,
     "view_details": True,
     "search_placeholder": True,
-    "contact_word": True
+    "contact_word": True,
+    "bid_name_label": True,
+    "bid_phone_label": True,
+    "bid_amount_label": True,
+    "bid_submit_btn": True
 }
 
 site_config = {
@@ -96,7 +101,11 @@ site_config = {
         "back_home": "← العودة إلى المتجر الرئيسي",
         "view_details": "عرض التفاصيل",
         "search_placeholder": "🔍 ابحث عن عنصر أو منتج...",
-        "contact_word": "تواصل"
+        "contact_word": "تواصل",
+        "bid_name_label": "اسمك الكريم:",
+        "bid_phone_label": "رقم هاتفك للتواصل (7 أرقام على الأقل):",
+        "bid_amount_label": "قيمة السعر المقترح للمزايدة (أرقام فقط):",
+        "bid_submit_btn": "تثبيت المزايدة 🚀"
     },
     "colors": {
         "bg_color": "#000000",             
@@ -476,6 +485,7 @@ auction_detail_template = """
         .info { font-size: 14px; margin-bottom: 10px; color: #ddd; display: flex; justify-content: space-between; background: #000; padding: 10px; border-radius: 8px; border: 1px solid #222; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; outline: none; }
         button { width: 100%; padding: 12px; border-radius: 8px; background: #d97706; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 15px; }
+        .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 10px; border-radius: 8px; text-align: center; font-size: 13px; margin-bottom: 15px; }
         .back { display: block; text-align: center; margin-top: 20px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 14px; }
     </style>
 </head>
@@ -494,14 +504,19 @@ auction_detail_template = """
         <div class="info"><span>الحد الأدنى للمزايدة:</span><b>{{ auction.min_bid }}</b></div>
         {% if auction.max_price %}<div class="info"><span>الحد الأقصى (الشراء الفوري):</span><b style="color: #ff5252;">{{ auction.max_price }}</b></div>{% endif %}
         
+        {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+
         <form action="/bid/{{ auction.id }}" method="POST" style="margin-top: 20px;">
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">اسمك الكريم:</label>
+            {% if vis.bid_name_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_name_label }}</label>{% endif %}
             <input type="text" name="bidder_name" placeholder="أدخل اسمك" required>
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">رقم هاتفك للتواصل:</label>
-            <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك" required>
-            <label style="display: block; margin-bottom: 5px; font-size: 13px;">قيمة السعر المقترح للمزايدة:</label>
-            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" required>
-            <button type="submit">تثبيت المزايدة 🚀</button>
+            
+            {% if vis.bid_phone_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_phone_label }}</label>{% endif %}
+            <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك (أرقام فقط)" required>
+            
+            {% if vis.bid_amount_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_amount_label }}</label>{% endif %}
+            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة (أرقام فقط)" required>
+            
+            <button type="submit">{{ config.texts.bid_submit_btn }}</button>
         </form>
         <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
     </div>
@@ -928,7 +943,7 @@ def remove_from_cart(cart_id):
 def auction_detail(a_id):
     auction = next((a for a in auctions if a['id'] == a_id), None)
     if not auction: return redirect(url_for('index'))
-    return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls)
+    return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error=None)
 
 @app.route('/bid/<int:a_id>', methods=['POST'])
 def place_bid(a_id):
@@ -938,18 +953,40 @@ def place_bid(a_id):
     bid_amount = request.form.get('bid_amount', '').strip()
     
     auction = next((a for a in auctions if a['id'] == a_id), None)
-    if auction and bid_amount and bidder_name:
+    if not auction: return redirect(url_for('index'))
+
+    # التحقق من شروط الهاتف (أرقام فقط وأقل شي 7 أرقام)
+    if not bidder_phone.isdigit() or len(bidder_phone) < 7:
+        return render_template_string(
+            auction_detail_template, 
+            auction=auction, 
+            config=site_config, 
+            controls=site_controls, 
+            vis=text_visibility, 
+            error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!"
+        )
+
+    # التحقق من شروط السعر المقترح (أرقام فقط بدون أحرف)
+    if not bid_amount.isdigit():
+        return render_template_string(
+            auction_detail_template, 
+            auction=auction, 
+            config=site_config, 
+            controls=site_controls, 
+            vis=text_visibility, 
+            error="❌ خطأ: السعر المقترح للمزايدة يجب أن يكون أرقاماً فقط بدون أحرف!"
+        )
+
+    if bid_amount and bidder_name:
         auction['current_price'] = f"{bid_amount} (بواسطة: {bidder_name})"
         auction['last_bidder_name'] = bidder_name
         auction['last_bidder_phone'] = bidder_phone
         
-        # تجهيز رسالة الواتساب المباشرة لك
         msg = f"مرحباً سامر، لدي مزايدة جديدة على القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
         encoded_msg = urllib.parse.quote(msg)
         whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
         whatsapp_url = f"https://wa.me/{whatsapp_number}?text={encoded_msg}"
         
-        # إعادة توجيه الزبون مباشرة إلى صفحة الواتساب الخاصة بك
         return redirect(whatsapp_url)
         
     return redirect(url_for('auction_detail', a_id=a_id))
