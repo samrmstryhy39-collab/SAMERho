@@ -89,6 +89,7 @@ site_controls = {
     "enable_cart": True,
     "enable_cod_note": True,
     "enable_forgot_pass": True,
+    "enable_scroll_top": True,    # تفعيل زر العودة إلى الأعلى افتراضياً
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
@@ -189,6 +190,7 @@ site_config = {
         "product_title": "#ffffff",        
         "product_price": "#25d366",        
         "whatsapp_btn": "#25d366",         
+        "share_btn_color": "#2563eb",      # لون زر المشاركة الجديد
         "cart_btn": "#dc2626",             
         "toggle_btn": "#25d366",           
         "form_main_title": "#ffffff",      
@@ -216,6 +218,7 @@ color_names_ar = {
     "product_title": "لون عنوان المنتج",
     "product_price": "لون سعر المنتج والكمية",
     "whatsapp_btn": "لون زر التفاصيل / التواصل",
+    "share_btn_color": "لون زر مشاركة المنتج 🔗",
     "cart_btn": "لون خلفية زر أضف إلى السلة",
     "toggle_btn": "لون زر فتح وإغلاق قائمة الإضافة",
     "form_main_title": "لون عنوان نموذج الإضافة",
@@ -244,7 +247,7 @@ product_detail_template = """
         .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
         .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
         .buy-toggle-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
-        .share-btn { display: block; text-align: center; background: #2563eb; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
+        .share-btn { display: block; text-align: center; background: {{ config.colors.share_btn_color }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
         .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
         .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
         .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
@@ -444,9 +447,15 @@ default_html_template = """
         .product-price { color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 8px; font-size: 13px; }
         
         .card-buttons { display: flex; flex-direction: column; gap: 6px; }
-        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; }
-        .add-to-cart-btn { background: {{ config.colors.cart_btn }}; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; }
+        .card-buttons-row { display: flex; gap: 5px; width: 100%; }
+        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; flex: 1; box-sizing: border-box; }
+        .quick-share-card-btn { display: flex; align-items: center; justify-content: center; background: {{ config.colors.share_btn_color }}; color: white; padding: 7px; border-radius: 6px; border: none; cursor: pointer; flex: 1; font-weight: bold; font-size: 11px; text-decoration: none; box-sizing: border-box; gap: 4px; }
+        .quick-share-card-btn svg { width: 14px; height: 14px; fill: currentColor; }
+        .add-to-cart-btn { background: {{ config.colors.cart_btn }}; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; box-sizing: border-box; }
         .sold-btn-disabled { background: #555 !important; }
+
+        /* زر العودة إلى الأعلى */
+        .scroll-top-btn { display: none; position: fixed; bottom: 25px; right: 25px; background: {{ config.colors.whatsapp_btn }}; color: #fff; width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 500; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
         .pagination { display: flex; justify-content: center; gap: 8px; margin: 30px 0 15px 0; flex-wrap: wrap; }
         .page-link { background: #111; border: 1px solid #333; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
@@ -471,7 +480,12 @@ default_html_template = """
     </style>
 </head>
 <body>
-    <div id="toast" class="toast-msg">✅ تم الإضافة إلى السلة</div>
+    <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
+
+    <!-- زر العودة إلى الأعلى -->
+    {% if controls.enable_scroll_top %}
+    <button id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" title="العودة للأعلى">▲</button>
+    {% endif %}
 
     <div class="top-bar">
         <div class="dropdown">
@@ -556,9 +570,15 @@ default_html_template = """
                         <div class="product-price">{{ p.price }} {% if p.quantity %} | الكمية: {{ p.quantity }}{% endif %}</div>
                         <div class="card-buttons">
                             {% if vis.view_details %}
-                                <a href="/product/{{ p.id }}" class="contact-btn {% if p.is_sold %}sold-btn-disabled{% endif %}">
-                                    {% if p.is_sold %}تم البيع (عرض التفاصيل){% else %}{{ config.texts.view_details }}{% endif %}
-                                </a>
+                                <div class="card-buttons-row">
+                                    <a href="/product/{{ p.id }}" class="contact-btn {% if p.is_sold %}sold-btn-disabled{% endif %}">
+                                        {% if p.is_sold %}تم البيع{% else %}{{ config.texts.view_details }}{% endif %}
+                                    </a>
+                                    <button type="button" class="quick-share-card-btn" onclick="quickShareProduct('{{ p.title | replace("'", "\\'") }}', '{{ p.price }}', '/product/{{ p.id }}')" title="مشاركة القطعة">
+                                        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>
+                                        مشاركة
+                                    </button>
+                                </div>
                             {% endif %}
                             {% if controls.enable_cart and not p.is_sold %}
                                 <button type="button" class="add-to-cart-btn" onclick="addToCart({{ p.id }})">أضف إلى السلة 🛒</button>
@@ -618,6 +638,30 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
+        // سكربت زر العودة إلى الأعلى
+        const scrollBtn = document.getElementById('scrollTopBtn');
+        window.addEventListener('scroll', () => {
+            if (scrollBtn) {
+                if (window.scrollY > 300) { scrollBtn.style.display = 'flex'; }
+                else { scrollBtn.style.display = 'none'; }
+            }
+        });
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+        // وظيفة المشاركة السريعة للبطاقات
+        function quickShareProduct(title, price, path) {
+            const productUrl = window.location.origin + path;
+            const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 ${title}\n💰 السعر: ${price}\n🔗 الرابط: ${productUrl}`;
+            if (navigator.share) { navigator.share({ title: title, text: shareText, url: productUrl }).catch(() => {}); }
+            else {
+                navigator.clipboard.writeText(shareText);
+                const toast = document.getElementById('toast');
+                toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
+                toast.style.display = 'flex';
+                setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            }
+        }
+
         function toggleFilterMenu() { document.getElementById("filterMenu").classList.toggle("filter-show"); }
         function selectSort(sortType, sortName) { document.getElementById("sortValue").value = sortType; document.getElementById("filterMenu").classList.remove("filter-show"); filterAndSortProducts(); }
         window.addEventListener('click', function(e) {
@@ -938,6 +982,7 @@ admin_template = """
                 <form action="/update-controls" method="POST">
                     <label class="checkbox-label"><input type="checkbox" name="enable_cart" {% if controls.enable_cart %}checked{% endif %}> تفعيل سلة المشتريات وزر "أضف إلى السلة"</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_auctions" {% if controls.enable_auctions %}checked{% endif %}> تفعيل قسم المزادات</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_scroll_top" {% if controls.enable_scroll_top %}checked{% endif %}> تفعيل زر "العودة إلى الأعلى" في المتجر</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_forgot_pass" {% if controls.enable_forgot_pass %}checked{% endif %}> تفعيل زر "نسيت كلمة السر" في صفحة الدخول</label>
                     <label class="checkbox-label"><input type="checkbox" name="block_posting" {% if controls.block_posting %}checked{% endif %}> منع المستخدمين من الإضافة</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_search" {% if controls.enable_search %}checked{% endif %}> تفعيل البحث</label>
@@ -1388,6 +1433,7 @@ def update_controls():
     global site_controls
     site_controls['enable_cart'] = True if request.form.get('enable_cart') == 'on' else False
     site_controls['enable_auctions'] = True if request.form.get('enable_auctions') == 'on' else False
+    site_controls['enable_scroll_top'] = True if request.form.get('enable_scroll_top') == 'on' else False
     site_controls['enable_forgot_pass'] = True if request.form.get('enable_forgot_pass') == 'on' else False
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
