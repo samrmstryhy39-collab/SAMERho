@@ -243,8 +243,10 @@ default_html_template = """
         .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
 
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
-        .search-box { width: 100%; max-width: 900px; margin-bottom: 20px; }
-        .search-input { width: 100%; padding: 12px 18px; background: #111; border: 1px solid #333; border-radius: 10px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
+        
+        .search-filter-bar { width: 100%; max-width: 900px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .search-input { flex: 1; min-width: 200px; padding: 12px 18px; background: #111; border: 1px solid #333; border-radius: 10px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
+        .filter-select { padding: 12px 15px; background: #111; border: 1px solid #333; border-radius: 10px; color: white; font-size: 13px; outline: none; cursor: pointer; }
         
         .auctions-section { width: 100%; max-width: 900px; margin-bottom: 30px; }
         .auction-card { background: #151515; border: 1px solid #d97706; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
@@ -271,7 +273,6 @@ default_html_template = """
         .card-buttons { display: flex; flex-direction: column; gap: 6px; }
         .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; }
         .add-to-cart-btn { background: {{ config.colors.cart_btn }}; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; }
-        .share-card-btn { background: #2563eb; color: white; border: none; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; }
         .sold-btn-disabled { background: #555 !important; }
 
         .pagination { display: flex; justify-content: center; gap: 8px; margin: 30px 0 15px 0; flex-wrap: wrap; }
@@ -297,7 +298,7 @@ default_html_template = """
     </style>
 </head>
 <body>
-    <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
+    <div id="toast" class="toast-msg">✅ تم الإضافة إلى السلة</div>
 
     <div class="top-bar">
         <div class="dropdown">
@@ -320,8 +321,16 @@ default_html_template = """
         {% endif %}
         <p>{{ config.subtitle }}</p>
     </div>
+    
     {% if controls.enable_search and vis.search_placeholder %}
-    <div class="search-box"><input type="text" id="searchInput" class="search-input" placeholder="{{ config.texts.search_placeholder }}" onkeyup="filterProducts()"></div>
+    <div class="search-filter-bar">
+        <input type="text" id="searchInput" class="search-input" placeholder="{{ config.texts.search_placeholder }}" onkeyup="filterAndSortProducts()">
+        <select id="sortSelect" class="filter-select" onchange="filterAndSortProducts()">
+            <option value="newest">🕒 الأحدث</option>
+            <option value="price-low">💵 السعر: من الأقل للأعلى</option>
+            <option value="price-high">📈 السعر: من الأعلى للأقل</option>
+        </select>
+    </div>
     {% endif %}
 
     {% if controls.enable_auctions and auctions|length > 0 %}
@@ -368,7 +377,7 @@ default_html_template = """
         <div class="products-grid" id="productsGrid">
             {% if products|length == 0 and vis.no_products %}<p style="color: {{ config.colors.no_products }}; text-align: center; grid-column: 1 / -1; padding: 20px;">{{ config.texts.no_products }}</p>{% endif %}
             {% for p in page_products %}
-                <div class="product-card {% if p.is_sold %}sold-card{% endif %}" data-title="{{ p.title }}">
+                <div class="product-card {% if p.is_sold %}sold-card{% endif %}" data-title="{{ p.title }}" data-price="{{ p.numeric_price }}" data-id="{{ p.id }}">
                     {% if p.is_sold %}<div class="sold-badge">تم البيع</div>{% endif %}
                     <div class="product-images">{% for img in p.images %}<img src="{{ img }}" alt="صورة">{% endfor %}</div>
                     <div class="product-info">
@@ -383,7 +392,6 @@ default_html_template = """
                             {% if controls.enable_cart and not p.is_sold %}
                                 <button type="button" class="add-to-cart-btn" onclick="addToCart({{ p.id }})">أضف إلى السلة 🛒</button>
                             {% endif %}
-                            <button type="button" class="share-card-btn" onclick="shareProduct('{{ p.title }}', '{{ p.price }}', {{ p.id }})">مشاركة القطعة 🔗</button>
                         </div>
                     </div>
                 </div>
@@ -391,7 +399,7 @@ default_html_template = """
         </div>
 
         {% if total_pages > 1 %}
-        <div class="pagination">
+        <div class="pagination" id="paginationSection">
             {% for p_num in range(1, total_pages + 1) %}
                 <a href="/?page={{ p_num }}" class="page-link {% if p_num == current_page %}active{% endif %}">{{ p_num }}</a>
             {% endfor %}
@@ -442,25 +450,6 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
-        function shareProduct(title, price, id) {
-            const productUrl = window.location.origin + '/product/' + id;
-            const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 ${title}\n💰 السعر: ${price}\n🔗 الرابط: ${productUrl}`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: title,
-                    text: shareText,
-                    url: productUrl
-                }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(shareText);
-                const toast = document.getElementById('toast');
-                toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
-                toast.style.display = 'flex';
-                setTimeout(() => { toast.style.display = 'none'; }, 3000);
-            }
-        }
-
         function addToCart(productId) {
             fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
             .then(response => response.json())
@@ -529,13 +518,43 @@ default_html_template = """
             {% endif %}
         };
         function showCount(input) { if(input.files.length > 0) { document.getElementById('file-count').innerText = "✅ تم اختيار " + input.files.length + " صورة."; } }
-        function filterProducts() {
-            const input = document.getElementById('searchInput'); if(!input) return;
-            const filter = input.value.toLowerCase();
-            const cards = document.getElementById('productsGrid').getElementsByClassName('product-card');
-            for (let i = 0; i < cards.length; i++) {
-                cards[i].style.display = cards[i].getAttribute('data-title').toLowerCase().includes(filter) ? "" : "none";
+        
+        function filterAndSortProducts() {
+            const searchInput = document.getElementById('searchInput');
+            const sortSelect = document.getElementById('sortSelect');
+            const grid = document.getElementById('productsGrid');
+            const pagination = document.getElementById('paginationSection');
+            if(!grid) return;
+            
+            const filter = searchInput ? searchInput.value.toLowerCase() : '';
+            const sortVal = sortSelect ? sortSelect.value : 'newest';
+            const cards = Array.from(grid.getElementsByClassName('product-card'));
+            
+            if (pagination) {
+                pagination.style.display = (filter !== '' || sortVal !== 'newest') ? 'none' : 'flex';
             }
+
+            cards.forEach(card => {
+                const title = card.getAttribute('data-title').toLowerCase();
+                card.style.display = title.includes(filter) ? "" : "none";
+            });
+
+            cards.sort((a, b) => {
+                const priceA = parseFloat(a.getAttribute('data-price')) || 0;
+                const priceB = parseFloat(b.getAttribute('data-price')) || 0;
+                const idA = parseInt(a.getAttribute('data-id')) || 0;
+                const idB = parseInt(b.getAttribute('data-id')) || 0;
+
+                if (sortVal === 'price-low') {
+                    return priceA - priceB;
+                } else if (sortVal === 'price-high') {
+                    return priceB - priceA;
+                } else {
+                    return idB - idA; // الأحدث
+                }
+            });
+
+            cards.forEach(card => grid.appendChild(card));
         }
     </script>
 </body>
@@ -1551,9 +1570,16 @@ def add_product():
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
+    
+    numeric_price = 0.0
+    try:
+        numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
+    except Exception:
+        pass
+
     if title:
         products.insert(0, {
-            "id": product_id_counter, "title": title, "price": price, "quantity": quantity,
+            "id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity,
             "description": description, "contact_type": "phone", "contact_value": "",
             "images": [img for img in images_list if img], "is_sold": False
         })
@@ -1568,9 +1594,16 @@ def admin_add_product():
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
+    
+    numeric_price = 0.0
+    try:
+        numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
+    except Exception:
+        pass
+
     if title:
         products.insert(0, {
-            "id": product_id_counter, "title": title, "price": price, "quantity": quantity,
+            "id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity,
             "description": description, "contact_type": "phone", "contact_value": "",
             "images": [img for img in images_list if img], "is_sold": False
         })
