@@ -382,7 +382,7 @@ default_html_template = """
     {% endif %}
     <script>
         function addToCart(productId) {
-            fetch('/add-to-cart-ajax/' + productId, { method: 'POST' })
+            fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
             .then(response => response.json())
             .then(data => {
                 const toast = document.getElementById('toast');
@@ -657,7 +657,6 @@ reviews_page_template = """
         <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
     </div>
 </body>
-</html>
 """
 
 product_detail_template = """
@@ -1126,7 +1125,7 @@ def cart_page():
 def add_to_cart_ajax(p_id):
     product = next((p for p in products if p['id'] == p_id), None)
     if product and not product.get('is_sold', False):
-        cart = get_cart()
+        cart = list(session.get('cart', []))
         already_exists = any(item['id'] == p_id for item in cart)
         if already_exists:
             return jsonify({"success": False, "msg": "مضاف مسبقاً"})
@@ -1142,14 +1141,16 @@ def add_to_cart_ajax(p_id):
         }
         cart.append(cart_item)
         session['cart'] = cart
+        session.modified = True
         return jsonify({"success": True})
     return jsonify({"success": False})
 
 @app.route('/remove-from-cart/<cart_id>', methods=['POST'])
 def remove_from_cart(cart_id):
-    cart = get_cart()
+    cart = list(session.get('cart', []))
     cart = [item for item in cart if item.get('cart_id') != cart_id]
     session['cart'] = cart
+    session.modified = True
     return redirect(url_for('cart_page'))
 
 @app.route('/auction/<int:a_id>')
