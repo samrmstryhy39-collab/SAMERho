@@ -129,7 +129,10 @@ text_visibility = {
     "bid_name_label": True,
     "bid_phone_label": True,
     "bid_amount_label": True,
-    "bid_submit_btn": True
+    "bid_submit_btn": True,
+    "sort_newest": True,
+    "sort_price_low": True,
+    "sort_price_high": True
 }
 
 site_config = {
@@ -165,7 +168,10 @@ site_config = {
         "bid_name_label": "اسمك الكريم:",
         "bid_phone_label": "رقم هاتفك للتواصل:",
         "bid_amount_label": "قيمة السعر المقترح للمزايدة:",
-        "bid_submit_btn": "تثبيت المزايدة 🚀"
+        "bid_submit_btn": "تثبيت المزايدة 🚀",
+        "sort_newest": "🕒 الأحدث",
+        "sort_price_low": "💵 السعر: من الأقل للأعلى",
+        "sort_price_high": "📈 السعر: من الأعلى للأقل"
     },
     "colors": {
         "bg_color": "#000000",             
@@ -186,7 +192,11 @@ site_config = {
         "label_title": "#cccccc",          
         "upload_text": "#ffffff",          
         "submit_btn": "#25d366",
-        "glow_color": "#25d366"            
+        "glow_color": "#25d366",
+        "search_bar_bg": "#111111",
+        "search_bar_text": "#ffffff",
+        "filter_btn_bg": "#111111",
+        "filter_btn_text": "#ffffff"
     }
 }
 
@@ -209,7 +219,11 @@ color_names_ar = {
     "label_title": "لون عناوين الحقول (Labels)",
     "upload_text": "لون نص اختيار الصور",
     "submit_btn": "لون زر نشر المنتج",
-    "glow_color": "لون إضاءة وتوهج سلة المشتريات ✨"
+    "glow_color": "لون إضاءة وتوهج سلة المشتريات ✨",
+    "search_bar_bg": "لون خلفية شريط البحث",
+    "search_bar_text": "لون نص شريط البحث",
+    "filter_btn_bg": "لون خلفية زر الفلترة ⌃",
+    "filter_btn_text": "لون أيقونة ونصوص زر الفلترة"
 }
 
 default_html_template = """
@@ -244,10 +258,18 @@ default_html_template = """
 
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         
-        .search-filter-bar { width: 100%; max-width: 900px; margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-        .search-input { flex: 1; min-width: 200px; padding: 12px 18px; background: #111; border: 1px solid #333; border-radius: 10px; color: white; font-size: 14px; box-sizing: border-box; outline: none; }
-        .filter-select { padding: 12px 15px; background: #111; border: 1px solid #333; border-radius: 10px; color: white; font-size: 13px; outline: none; cursor: pointer; }
+        .search-filter-bar { width: 100%; max-width: 900px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+        .search-input { flex: 1; padding: 12px 18px; background: {{ config.colors.search_bar_bg }}; color: {{ config.colors.search_bar_text }}; border: 1px solid #333; border-radius: 10px; font-size: 14px; box-sizing: border-box; outline: none; }
         
+        .filter-dropdown-container { position: relative; display: inline-block; }
+        .filter-icon-btn { background: {{ config.colors.filter_btn_bg }}; color: {{ config.colors.filter_btn_text }}; border: 1px solid #333; width: 45px; height: 45px; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
+        .filter-icon-btn:hover { border-color: #25d366; }
+        .filter-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 210px; box-shadow: 0px 8px 16px rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 8px; z-index: 10; overflow: hidden; margin-top: 5px; }
+        .filter-content div { color: {{ config.colors.filter_btn_text }}; padding: 10px 14px; cursor: pointer; font-size: 13px; text-align: right; border-bottom: 1px solid #222; }
+        .filter-content div:last-child { border-bottom: none; }
+        .filter-content div:hover { background-color: #222; color: #25d366; }
+        .filter-show { display: block; }
+
         .auctions-section { width: 100%; max-width: 900px; margin-bottom: 30px; }
         .auction-card { background: #151515; border: 1px solid #d97706; border-radius: 12px; padding: 15px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
         .auction-header { display: flex; justify-content: space-between; align-items: center; }
@@ -325,11 +347,15 @@ default_html_template = """
     {% if controls.enable_search and vis.search_placeholder %}
     <div class="search-filter-bar">
         <input type="text" id="searchInput" class="search-input" placeholder="{{ config.texts.search_placeholder }}" onkeyup="filterAndSortProducts()">
-        <select id="sortSelect" class="filter-select" onchange="filterAndSortProducts()">
-            <option value="newest">🕒 الأحدث</option>
-            <option value="price-low">💵 السعر: من الأقل للأعلى</option>
-            <option value="price-high">📈 السعر: من الأعلى للأقل</option>
-        </select>
+        <div class="filter-dropdown-container">
+            <button type="button" class="filter-icon-btn" onclick="toggleFilterMenu()" title="ترتيب المنتجات">⌃</button>
+            <div id="filterMenu" class="filter-content">
+                {% if vis.sort_newest %}<div onclick="selectSort('newest', '{{ config.texts.sort_newest }}')">{{ config.texts.sort_newest }}</div>{% endif %}
+                {% if vis.sort_price_low %}<div onclick="selectSort('price-low', '{{ config.texts.sort_price_low }}')">{{ config.texts.sort_price_low }}</div>{% endif %}
+                {% if vis.sort_price_high %}<div onclick="selectSort('price-high', '{{ config.texts.sort_price_high }}')">{{ config.texts.sort_price_high }}</div>{% endif %}
+            </div>
+        </div>
+        <input type="hidden" id="sortValue" value="newest">
     </div>
     {% endif %}
 
@@ -450,6 +476,24 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
+        function toggleFilterMenu() {
+            document.getElementById("filterMenu").classList.toggle("filter-show");
+        }
+        function selectSort(sortType, sortName) {
+            document.getElementById("sortValue").value = sortType;
+            document.getElementById("filterMenu").classList.remove("filter-show");
+            filterAndSortProducts();
+        }
+
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.filter-dropdown-container')) {
+                var menu = document.getElementById("filterMenu");
+                if (menu && menu.classList.contains('filter-show')) {
+                    menu.classList.remove('filter-show');
+                }
+            }
+        });
+
         function addToCart(productId) {
             fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
             .then(response => response.json())
@@ -521,13 +565,13 @@ default_html_template = """
         
         function filterAndSortProducts() {
             const searchInput = document.getElementById('searchInput');
-            const sortSelect = document.getElementById('sortSelect');
+            const sortInput = document.getElementById('sortValue');
             const grid = document.getElementById('productsGrid');
             const pagination = document.getElementById('paginationSection');
             if(!grid) return;
             
             const filter = searchInput ? searchInput.value.toLowerCase() : '';
-            const sortVal = sortSelect ? sortSelect.value : 'newest';
+            const sortVal = sortInput ? sortInput.value : 'newest';
             const cards = Array.from(grid.getElementsByClassName('product-card'));
             
             if (pagination) {
