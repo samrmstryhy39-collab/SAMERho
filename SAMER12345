@@ -128,7 +128,7 @@ site_config = {
         "label_title": "#cccccc",          
         "upload_text": "#ffffff",          
         "submit_btn": "#25d366",
-        "glow_color": "#25d366"            # لون إضاءة وتوهج السلة
+        "glow_color": "#25d366"            
     }
 }
 
@@ -473,14 +473,18 @@ cart_template = """
         h1 { color: #dc2626; text-align: center; font-size: 24px; margin-bottom: 25px; text-shadow: 0 0 15px {{ config.colors.glow_color }}; }
         
         .cart-items-wrapper { width: 100%; max-width: 950px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 16px 22px; border-radius: 10px; border: 1px solid #222; box-shadow: 0 0 20px {{ config.colors.glow_color }}; transition: box-shadow 0.3s ease; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 14px 18px; border-radius: 10px; border: 1px solid #222; box-shadow: 0 0 20px {{ config.colors.glow_color }}; transition: box-shadow 0.3s ease; gap: 12px; }
         .cart-item:hover { box-shadow: 0 0 30px {{ config.colors.glow_color }}; }
         
-        .cart-item-info { text-decoration: none; display: block; flex: 1; }
-        .cart-item-title { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px; }
+        .cart-item-left { display: flex; align-items: center; gap: 15px; flex: 1; text-decoration: none; }
+        .cart-item-img { width: 65px; height: 65px; object-fit: cover; border-radius: 8px; border: 1px solid #333; background: #000; flex-shrink: 0; }
+        
+        .cart-item-info { display: flex; flex-direction: column; gap: 4px; }
+        .cart-item-title { font-size: 16px; font-weight: bold; color: #fff; }
         .cart-item-title:hover { color: #25d366; }
         .cart-item-price { font-size: 14px; color: #25d366; font-weight: bold; }
-        .delete-btn { background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+        
+        .delete-btn { background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; flex-shrink: 0; }
         .back-area { width: 100%; max-width: 950px; margin: 30px auto 10px auto; text-align: center; }
         .back { display: inline-block; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
     </style>
@@ -494,9 +498,14 @@ cart_template = """
             {% else %}
                 {% for item in cart_items %}
                     <div class="cart-item">
-                        <a href="/product/{{ item.id }}" class="cart-item-info">
-                            <div class="cart-item-title">{{ item.title }}</div>
-                            <div class="cart-item-price">{{ item.price }}</div>
+                        <a href="/product/{{ item.id }}" class="cart-item-left">
+                            {% if item.image %}
+                                <img src="{{ item.image }}" alt="صورة المنتج" class="cart-item-img">
+                            {% endif %}
+                            <div class="cart-item-info">
+                                <div class="cart-item-title">{{ item.title }}</div>
+                                <div class="cart-item-price">{{ item.price }}</div>
+                            </div>
                         </a>
                         <form action="/remove-from-cart/{{ item.cart_id }}" method="POST" style="margin:0;">
                             <button type="submit" class="delete-btn">حذف</button>
@@ -1123,11 +1132,13 @@ def add_to_cart_ajax(p_id):
             return jsonify({"success": False, "msg": "مضاف مسبقاً"})
         
         import uuid
+        first_img = product['images'][0] if product['images'] and len(product['images']) > 0 else ""
         cart_item = {
             "cart_id": str(uuid.uuid4()),
             "id": product['id'],
             "title": product['title'],
-            "price": product['price']
+            "price": product['price'],
+            "image": first_img
         }
         cart.append(cart_item)
         session['cart'] = cart
