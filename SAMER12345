@@ -28,6 +28,11 @@ ADMIN_PASSWORD = "samemomomo**1"
 login_attempts = 0
 lockout_until = 0
 
+# متغيرات الإحصائيات العامة للمتجر
+site_stats = {
+    "total_visits": 0
+}
+
 CART_FILE = "persistent_cart.json"
 
 def load_persistent_cart():
@@ -449,7 +454,6 @@ default_html_template = """
         
         .card-buttons { display: flex; flex-direction: column; gap: 6px; }
         
-        /* زر عرض التفاصيل وشعار المشاركة المدمج بنفس لون زر التفاصيل المأخوذ من الإعدادات */
         .contact-btn-wrapper { display: flex; align-items: stretch; width: 100%; border-radius: 6px; overflow: hidden; background: {{ config.colors.whatsapp_btn }}; }
         .contact-btn { display: flex; align-items: center; justify-content: center; text-align: center; color: white; padding: 7px 10px; text-decoration: none; font-weight: bold; font-size: 11px; flex: 1; border: none; background: transparent; cursor: pointer; box-sizing: border-box; }
         .inline-share-btn { display: flex; align-items: center; justify-content: center; background: transparent; color: white; padding: 7px 12px; border: none; cursor: pointer; text-decoration: none; box-sizing: border-box; border-right: 1px solid rgba(255,255,255,0.25); }
@@ -458,7 +462,6 @@ default_html_template = """
         .add-to-cart-btn { background: {{ config.colors.cart_btn }}; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; box-sizing: border-box; }
         .sold-btn-disabled { background: #555 !important; }
 
-        /* زر العودة إلى الأعلى */
         .scroll-top-btn { display: none; position: fixed; bottom: 25px; right: 25px; background: {{ config.colors.whatsapp_btn }}; color: #fff; width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 500; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
         .pagination { display: flex; justify-content: center; gap: 8px; margin: 30px 0 15px 0; flex-wrap: wrap; }
@@ -486,7 +489,6 @@ default_html_template = """
 <body>
     <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
 
-    <!-- زر العودة إلى الأعلى -->
     {% if controls.enable_scroll_top %}
     <button id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" title="العودة للأعلى">▲</button>
     {% endif %}
@@ -641,7 +643,6 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
-        // سكربت زر العودة إلى الأعلى
         const scrollBtn = document.getElementById('scrollTopBtn');
         window.addEventListener('scroll', () => {
             if (scrollBtn) {
@@ -651,7 +652,6 @@ default_html_template = """
         });
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
-        // وظيفة المشاركة السريعة للبطاقات
         function quickShareProduct(title, price, path) {
             event.stopPropagation();
             const productUrl = window.location.origin + path;
@@ -933,6 +933,7 @@ admin_template = """
         .collapsible-content { display: none; background: #0a0a0a; border: 1px solid #222; border-top: none; padding: 15px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-bottom: 15px; }
         .forgot-pass-btn { display: block; text-align: center; background: #25d366; color: #000; padding: 10px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: bold; margin-top: 10px; }
         .forgot-pass-btn:hover { background: #22bf5b; }
+        .stat-box { background: #000; border: 1px solid #333; padding: 12px 15px; border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -958,6 +959,27 @@ admin_template = """
             {% endif %}
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
+
+            <div class="collapsible-header" onclick="toggleSection('sec_stats')"><span>📊 إحصائيات المتجر والزيارات</span><span id="icon-sec_stats">▼</span></div>
+            <div id="sec_stats" class="collapsible-content">
+                <div class="stat-box">
+                    <span>إجمالي زيارات المتجر:</span>
+                    <b style="color: #25d366; font-size: 16px;">{{ stats.total_visits }} زيارة</b>
+                </div>
+                <h4 style="color: #fbbf24; font-size: 14px; margin: 15px 0 10px 0;">مشاهدات قطع المنتجات:</h4>
+                {% if products|length == 0 %}
+                    <p style="color: #777; font-size: 12px; text-align: center;">لا توجد منتجات حالياً.</p>
+                {% else %}
+                    {% set sorted_prods = products|sort(attribute='views', reverse=True) %}
+                    {% for p in sorted_prods %}
+                        <div class="stat-box">
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70%;">🏷️ {{ p.title }}</span>
+                            <b style="color: #38bdf8;">{{ p.views | default(0) }} مشاهدة</b>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
             <div class="collapsible-header" onclick="toggleSection('sec_password')"><span>🔑 تغيير رمز مرور لوحة التحكم</span><span id="icon-sec_password">▼</span></div>
             <div id="sec_password" class="collapsible-content">
                 <form action="/update-password" method="POST">
@@ -1178,7 +1200,8 @@ def process_and_compress_image(image_file):
 
 @app.route('/')
 def index():
-    global current_html_template
+    global current_html_template, site_stats
+    site_stats['total_visits'] += 1
     cart = get_cart()
     per_page = 30
     try: page = int(request.args.get('page', 1))
@@ -1328,8 +1351,13 @@ def reviews_page():
 
 @app.route('/product/<int:p_id>')
 def product_detail(p_id):
+    global products
     product = next((p for p in products if p['id'] == p_id), None)
     if not product: return redirect(url_for('index'))
+    
+    # زيادة عداد المشاهدات للقطعة
+    product['views'] = product.get('views', 0) + 1
+    
     return render_template_string(product_detail_template, product=product, config=site_config, controls=site_controls, vis=text_visibility, error=None)
 
 @app.route('/copyright')
@@ -1392,7 +1420,7 @@ def add_product():
     try: numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
     except Exception: pass
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False})
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False, "views": 0})
         product_id_counter += 1
     return redirect(url_for('index'))
 
@@ -1408,7 +1436,7 @@ def admin_add_product():
     try: numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
     except Exception: pass
     if title:
-        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False})
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False, "views": 0})
         product_id_counter += 1
     return redirect(url_for('admin'))
 
@@ -1485,7 +1513,7 @@ def toggle_sold(p_id):
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    global ADMIN_PASSWORD, current_html_template, login_attempts, lockout_until
+    global ADMIN_PASSWORD, current_html_template, login_attempts, lockout_until, site_stats
     authorized = False
     error = False
     current_time = time.time()
@@ -1493,7 +1521,7 @@ def admin():
     remaining_seconds = int(lockout_until - current_time) if is_locked else 0
     if request.method == 'POST':
         if is_locked:
-            return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=False, error=True, is_locked=True, remaining_seconds=remaining_seconds, raw_template=current_html_template, color_names_ar=color_names_ar)
+            return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=False, error=True, is_locked=True, remaining_seconds=remaining_seconds, raw_template=current_html_template, color_names_ar=color_names_ar)
         if request.form.get('password') == ADMIN_PASSWORD:
             authorized = True
             login_attempts = 0
@@ -1506,7 +1534,7 @@ def admin():
                 remaining_seconds = 900
                 login_attempts = 0
     remaining_attempts = max(0, 5 - login_attempts)
-    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
+    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
