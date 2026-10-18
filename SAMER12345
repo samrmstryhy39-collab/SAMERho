@@ -6,6 +6,7 @@ from PIL import Image
 from datetime import datetime, timedelta
 import urllib.parse
 import re
+import json
 
 app = Flask(__name__)
 app.secret_key = 'samemomomo_secret_key'
@@ -22,6 +23,56 @@ auction_id_counter = 1
 note_id_counter = 1
 review_id_counter = 3
 ADMIN_PASSWORD = "samemomomo**1"
+
+CART_FILE = "persistent_cart.json"
+
+def load_persistent_cart():
+    try:
+        if os.path.exists(CART_FILE):
+            with open(CART_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def save_persistent_cart(cart_data):
+    try:
+        with open(CART_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cart_data, f, ensure_ascii=False)
+    except Exception:
+        pass
+
+def get_user_cart_id():
+    if 'user_cart_uuid' not in session:
+        import uuid
+        session['user_cart_uuid'] = str(uuid.uuid4())
+    return session['user_cart_uuid']
+
+def get_cart():
+    all_carts = load_persistent_cart()
+    uid = get_user_cart_id()
+    cart = all_carts.get(uid, [])
+    
+    updated = False
+    for item in cart:
+        if not item.get('image') or not item.get('title'):
+            prod = next((p for p in products if p['id'] == item['id']), None)
+            if prod:
+                item['title'] = prod['title']
+                item['price'] = prod['price']
+                item['image'] = prod['images'][0] if prod['images'] and len(prod['images']) > 0 else ""
+                updated = True
+    if updated:
+        all_carts[uid] = cart
+        save_persistent_cart(all_carts)
+        
+    return cart
+
+def update_cart_in_storage(cart):
+    all_carts = load_persistent_cart()
+    uid = get_user_cart_id()
+    all_carts[uid] = cart
+    save_persistent_cart(all_carts)
 
 site_controls = {
     "block_posting": False,  
@@ -1099,24 +1150,6 @@ def process_and_compress_image(image_file):
     except Exception:
         return None
 
-def get_cart():
-    if 'cart' not in session:
-        session['cart'] = []
-    
-    updated = False
-    for item in session['cart']:
-        if not item.get('image') or not item.get('title'):
-            prod = next((p for p in products if p['id'] == item['id']), None)
-            if prod:
-                item['title'] = prod['title']
-                item['price'] = prod['price']
-                item['image'] = prod['images'][0] if prod['images'] and len(prod['images']) > 0 else ""
-                updated = True
-    if updated:
-        session.modified = True
-        
-    return session['cart']
-
 @app.route('/')
 def index():
     global current_html_template
@@ -1162,7 +1195,7 @@ def cart_page():
 def add_to_cart_ajax(p_id):
     product = next((p for p in products if p['id'] == p_id), None)
     if product and not product.get('is_sold', False):
-        cart = list(session.get('cart', []))
+        cart = list(get_cart())
         already_exists = any(item['id'] == p_id for item in cart)
         if already_exists:
             return jsonify({"success": False, "msg": "مضاف مسبقاً"})
@@ -1177,17 +1210,15 @@ def add_to_cart_ajax(p_id):
             "image": first_img
         }
         cart.append(cart_item)
-        session['cart'] = cart
-        session.modified = True
+        update_cart_in_storage(cart)
         return jsonify({"success": True})
     return jsonify({"success": False})
 
 @app.route('/remove-from-cart/<cart_id>', methods=['POST'])
 def remove_from_cart(cart_id):
-    cart = list(session.get('cart', []))
+    cart = list(get_cart())
     cart = [item for item in cart if item.get('cart_id') != cart_id]
-    session['cart'] = cart
-    session.modified = True
+    update_cart_in_storage(cart)
     return redirect(url_for('cart_page'))
 
 @app.route('/auction/<int:a_id>')
