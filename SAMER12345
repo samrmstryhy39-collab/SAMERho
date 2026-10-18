@@ -657,6 +657,7 @@ reviews_page_template = """
         <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
     </div>
 </body>
+</html>
 """
 
 product_detail_template = """
@@ -1078,6 +1079,20 @@ def process_and_compress_image(image_file):
 def get_cart():
     if 'cart' not in session:
         session['cart'] = []
+    
+    # إصلاح تلقائي للمنتجات القديمة في السلة لضمان ظهور صورها وأسمائها بشكل دائم
+    updated = False
+    for item in session['cart']:
+        if not item.get('image') or not item.get('title'):
+            prod = next((p for p in products if p['id'] == item['id']), None)
+            if prod:
+                item['title'] = prod['title']
+                item['price'] = prod['price']
+                item['image'] = prod['images'][0] if prod['images'] and len(prod['images']) > 0 else ""
+                updated = True
+    if updated:
+        session.modified = True
+        
     return session['cart']
 
 @app.route('/')
