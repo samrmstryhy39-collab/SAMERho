@@ -28,7 +28,6 @@ ADMIN_PASSWORD = "samemomomo**1"
 login_attempts = 0
 lockout_until = 0
 
-# متغيرات الإحصائيات العامة للمتجر
 site_stats = {
     "total_visits": 0
 }
@@ -95,6 +94,8 @@ site_controls = {
     "enable_cod_note": True,
     "enable_forgot_pass": True,
     "enable_scroll_top": True,
+    "enable_marquee": True,  # تفعيل الشريط الإعلاني
+    "marquee_text": "🔥 أهلاً بكم في متجر عتيق - كل قطعة أصلية ولها حكاية فريدة 🏛️ | توصيل سريع لجميع المحافظات 🚚",
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
@@ -392,6 +393,11 @@ default_html_template = """
         body { background-color: {{ config.colors.bg_color }}; {% if config.bg_image %}background-image: url('{{ config.bg_image }}'); background-size: cover; background-position: center; background-attachment: fixed; {% endif %} font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
         {% if config.bg_image %}body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: -1; }{% endif %}
         
+        /* الشريط الإعلاني المتحرك */
+        .marquee-bar { width: 100%; max-width: 900px; background: rgba(217, 119, 6, 0.15); border: 1px solid #d97706; color: #fbbf24; padding: 8px 0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; white-space: nowrap; box-sizing: border-box; font-size: 13px; font-weight: bold; }
+        .marquee-content { display: inline-block; animation: marqueeAnim 20s linear infinite; padding-left: 100%; }
+        @keyframes marqueeAnim { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+
         .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; position: relative; }
         .dropdown { position: relative; display: inline-block; }
         .settings-btn { background: #111111; border: 1px solid #333333; padding: 10px 18px; border-radius: 12px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
@@ -414,8 +420,9 @@ default_html_template = """
             100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 15px {{ controls.logo_pulse_color }}; }
         }
 
-        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 16px; padding: 5px; width: 130px; height: 130px; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: customPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;{% endif %} }
-        .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
+        /* تعديل الشعار ليصبح دائري بالكامل مع تأثير النبض */
+        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 50%; padding: 5px; width: 130px; height: 130px; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: customPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;{% endif %} }
+        .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         
         .search-filter-bar { width: 100%; max-width: 900px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; box-sizing: border-box; }
@@ -443,7 +450,14 @@ default_html_template = """
         .products-section { width: 100%; max-width: 900px; margin-bottom: 20px; flex: 1; }
         .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
         @media (min-width: 768px) { .products-grid { grid-template-columns: repeat(4, 1fr); } }
-        .product-card { background: {{ config.colors.product_bg }}; border: 1px solid #222222; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; position: relative; }
+        
+        /* تأثير الظهور التدريجي للقطع (Fade-in Animation) */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .product-card { background: {{ config.colors.product_bg }}; border: 1px solid #222222; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; position: relative; animation: fadeInUp 0.6s ease-out forwards; }
+        
         .product-card.sold-card { opacity: 0.65; }
         .sold-badge { position: absolute; top: 10px; right: 10px; background: #dc2626; color: white; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; z-index: 2; }
         .product-images { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; background: #000; padding: 8px; width: 100%; box-sizing: border-box; }
@@ -491,6 +505,13 @@ default_html_template = """
 
     {% if controls.enable_scroll_top %}
     <button id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" title="العودة للأعلى">▲</button>
+    {% endif %}
+
+    <!-- الشريط الإعلاني المتحرك (يظهر إذا كان مفعل) -->
+    {% if controls.enable_marquee and controls.marquee_text %}
+    <div class="marquee-bar">
+        <div class="marquee-content">{{ controls.marquee_text }}</div>
+    </div>
     {% endif %}
 
     <div class="top-bar">
@@ -980,6 +1001,17 @@ admin_template = """
                 {% endif %}
             </div>
 
+            <!-- إعدادات الشريط الإعلاني المتحرك -->
+            <div class="collapsible-header" onclick="toggleSection('sec_marquee')"><span>📢 إعدادات الشريط الإعلاني المتحرك</span><span id="icon-sec_marquee">▼</span></div>
+            <div id="sec_marquee" class="collapsible-content">
+                <form action="/update-marquee" method="POST">
+                    <label class="checkbox-label"><input type="checkbox" name="enable_marquee" {% if controls.enable_marquee %}checked{% endif %}> تفعيل الشريط الإعلاني المتحرك أعلى المتجر</label>
+                    <label>نص الإعلان أو التنبيه المتحرك:</label>
+                    <textarea name="marquee_text" rows="3" placeholder="اكتب النص الإعلاني هنا..." required>{{ controls.marquee_text }}</textarea>
+                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشريط الإعلاني ✅</button>
+                </form>
+            </div>
+
             <div class="collapsible-header" onclick="toggleSection('sec_password')"><span>🔑 تغيير رمز مرور لوحة التحكم</span><span id="icon-sec_password">▼</span></div>
             <div id="sec_password" class="collapsible-content">
                 <form action="/update-password" method="POST">
@@ -1048,11 +1080,11 @@ admin_template = """
                     <button type="submit" style="margin-top: 15px;">حفظ التصميم</button>
                 </form>
             </div>
-            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع وحركة النبض</span><span id="icon-sec_logo">▼</span></div>
+            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع الدائري وحركة النبض</span><span id="icon-sec_logo">▼</span></div>
             <div id="sec_logo" class="collapsible-content">
                 <form action="/update-logo" method="POST" enctype="multipart/form-data">
-                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار في الموقع</label>
-                    <label>اختر صورة الشعار:</label><input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 12px;">
+                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار الدائري في الموقع</label>
+                    <label>اختر صورة الشعار (موصى بها مربعة لتبدو دائرية فخمة):</label><input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 12px;">
                     <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
                     <label class="checkbox-label"><input type="checkbox" name="enable_logo_pulse" {% if controls.enable_logo_pulse %}checked{% endif %}> تشغيل حركة النبض والتوهج المتحرك للصورة ✨</label>
                     <label>سرعة النبض (بالثواني - كلما زاد الرقم زاد البطء):</label>
@@ -1066,7 +1098,7 @@ admin_template = """
                         <input type="color" name="logo_pulse_color" value="{{ controls.logo_pulse_color }}">
                         <span style="font-size: 12px; color: #aaa;">اختر لون التوهج المناسب للشعار (مثل الذهبي أو الأحمر)</span>
                     </div>
-                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشعار ✅</button>
+                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشعار الدائري ✅</button>
                 </form>
             </div>
             <div class="collapsible-header" onclick="toggleSection('sec_auctions')"><span>🔨 إدارة وإطلاق المزادات</span><span id="icon-sec_auctions">▼</span></div>
@@ -1314,6 +1346,14 @@ def update_cod_settings():
     if text: site_controls['cod_note_text'] = text
     return redirect(url_for('admin'))
 
+@app.route('/update-marquee', methods=['POST'])
+def update_marquee():
+    global site_controls
+    site_controls['enable_marquee'] = True if request.form.get('enable_marquee') == 'on' else False
+    text = request.form.get('marquee_text', '').strip()
+    if text: site_controls['marquee_text'] = text
+    return redirect(url_for('admin'))
+
 @app.route('/update-password', methods=['POST'])
 def update_password():
     global ADMIN_PASSWORD
@@ -1354,10 +1394,7 @@ def product_detail(p_id):
     global products
     product = next((p for p in products if p['id'] == p_id), None)
     if not product: return redirect(url_for('index'))
-    
-    # زيادة عداد المشاهدات للقطعة
     product['views'] = product.get('views', 0) + 1
-    
     return render_template_string(product_detail_template, product=product, config=site_config, controls=site_controls, vis=text_visibility, error=None)
 
 @app.route('/copyright')
@@ -1522,20 +1559,4 @@ def admin():
     if request.method == 'POST':
         if is_locked:
             return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=False, error=True, is_locked=True, remaining_seconds=remaining_seconds, raw_template=current_html_template, color_names_ar=color_names_ar)
-        if request.form.get('password') == ADMIN_PASSWORD:
-            authorized = True
-            login_attempts = 0
-        else:
-            error = True
-            login_attempts += 1
-            if login_attempts >= 5:
-                lockout_until = current_time + 900
-                is_locked = True
-                remaining_seconds = 900
-                login_attempts = 0
-    remaining_attempts = max(0, 5 - login_attempts)
-    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
-
-if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+        if request.form.get('password') == ADMIN_
