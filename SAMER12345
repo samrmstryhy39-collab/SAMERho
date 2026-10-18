@@ -1,4 +1,4 @@
-From flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
 import os
 import base64
 from io import BytesIO
@@ -708,7 +708,8 @@ default_html_template = """
     </script>
 </body>
 </html>
-"""auction_detail_template = """
+"""
+auction_detail_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
