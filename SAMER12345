@@ -89,7 +89,7 @@ site_controls = {
     "enable_cart": True,
     "enable_cod_note": True,
     "enable_forgot_pass": True,
-    "enable_scroll_top": True,    # تفعيل زر العودة إلى الأعلى افتراضياً
+    "enable_scroll_top": True,
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
@@ -190,7 +190,7 @@ site_config = {
         "product_title": "#ffffff",        
         "product_price": "#25d366",        
         "whatsapp_btn": "#25d366",         
-        "share_btn_color": "#2563eb",      # لون زر المشاركة الجديد
+        "share_btn_color": "#2563eb",      
         "cart_btn": "#dc2626",             
         "toggle_btn": "#25d366",           
         "form_main_title": "#ffffff",      
@@ -375,6 +375,7 @@ cart_template = """
 </body>
 </html>
 """
+
 default_html_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -447,10 +448,13 @@ default_html_template = """
         .product-price { color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 8px; font-size: 13px; }
         
         .card-buttons { display: flex; flex-direction: column; gap: 6px; }
-        .card-buttons-row { display: flex; gap: 5px; width: 100%; }
-        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; flex: 1; box-sizing: border-box; }
-        .quick-share-card-btn { display: flex; align-items: center; justify-content: center; background: {{ config.colors.share_btn_color }}; color: white; padding: 7px; border-radius: 6px; border: none; cursor: pointer; flex: 1; font-weight: bold; font-size: 11px; text-decoration: none; box-sizing: border-box; gap: 4px; }
-        .quick-share-card-btn svg { width: 14px; height: 14px; fill: currentColor; }
+        
+        /* زر عرض التفاصيل الأصلي وبداخله شعار المشاركة المدمج */
+        .contact-btn-wrapper { display: flex; align-items: stretch; width: 100%; border-radius: 6px; overflow: hidden; background: {{ config.colors.whatsapp_btn }}; }
+        .contact-btn { display: flex; align-items: center; justify-content: center; text-align: center; color: white; padding: 7px 10px; text-decoration: none; font-weight: bold; font-size: 11px; flex: 1; border: none; background: transparent; cursor: pointer; box-sizing: border-box; }
+        .inline-share-btn { display: flex; align-items: center; justify-content: center; background: {{ config.colors.share_btn_color }}; color: white; padding: 7px 10px; border: none; cursor: pointer; text-decoration: none; box-sizing: border-box; border-right: 1px solid rgba(255,255,255,0.2); }
+        .inline-share-btn svg { width: 14px; height: 14px; fill: currentColor; }
+
         .add-to-cart-btn { background: {{ config.colors.cart_btn }}; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; box-sizing: border-box; }
         .sold-btn-disabled { background: #555 !important; }
 
@@ -570,13 +574,12 @@ default_html_template = """
                         <div class="product-price">{{ p.price }} {% if p.quantity %} | الكمية: {{ p.quantity }}{% endif %}</div>
                         <div class="card-buttons">
                             {% if vis.view_details %}
-                                <div class="card-buttons-row">
+                                <div class="contact-btn-wrapper">
                                     <a href="/product/{{ p.id }}" class="contact-btn {% if p.is_sold %}sold-btn-disabled{% endif %}">
                                         {% if p.is_sold %}تم البيع{% else %}{{ config.texts.view_details }}{% endif %}
                                     </a>
-                                    <button type="button" class="quick-share-card-btn" onclick="quickShareProduct('{{ p.title | replace("'", "\\'") }}', '{{ p.price }}', '/product/{{ p.id }}')" title="مشاركة القطعة">
+                                    <button type="button" class="inline-share-btn" onclick="quickShareProduct('{{ p.title | replace("'", "\\'") }}', '{{ p.price }}', '/product/{{ p.id }}')" title="مشاركة القطعة">
                                         <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>
-                                        مشاركة
                                     </button>
                                 </div>
                             {% endif %}
@@ -650,6 +653,7 @@ default_html_template = """
 
         // وظيفة المشاركة السريعة للبطاقات
         function quickShareProduct(title, price, path) {
+            event.stopPropagation();
             const productUrl = window.location.origin + path;
             const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 ${title}\n💰 السعر: ${price}\n🔗 الرابط: ${productUrl}`;
             if (navigator.share) { navigator.share({ title: title, text: shareText, url: productUrl }).catch(() => {}); }
