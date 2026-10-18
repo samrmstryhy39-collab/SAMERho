@@ -25,7 +25,6 @@ note_id_counter = 1
 review_id_counter = 3
 ADMIN_PASSWORD = "samemomomo**1"
 
-# متغيرات حماية تسجيل الدخول (قفل مؤقت بعد 5 محاولات خاطئة)
 login_attempts = 0
 lockout_until = 0
 
@@ -1187,13 +1186,11 @@ def process_and_compress_image(image_file):
         img = Image.open(image_file)
         if img.mode in ("RGBA", "P"): img = img.convert("RGB")
         
-        # تصحيح الاتجاه التلقائي بناءً على بيانات EXIF (إن وجدت)
         try:
             img = ImageOps.exif_transpose(img)
         except Exception:
             pass
 
-        # الحفاظ على أبعاد الصورة الأصلية (طولية أو عرضية) دون قص أو تشوه
         img.thumbnail((1000, 1000))
         
         buffer = BytesIO()
@@ -1593,7 +1590,7 @@ def delete_product(p_id):
 @app.route('/toggle-sold/<int:p_id>', methods=['POST'])
 def toggle_sold(p_id):
     global products
-    for p:
+    for p in products:
         if p['id'] == p_id: p['is_sold'] = not p.get('is_sold', False)
     return redirect(url_for('admin'))
 
@@ -1613,15 +1610,15 @@ def admin():
             
         if request.form.get('password') == ADMIN_PASSWORD:
             authorized = True
-            login_attempts = 0 # إعادة ضبط المحاولات عند النجاح
+            login_attempts = 0
         else:
             error = True
             login_attempts += 1
             if login_attempts >= 5:
-                lockout_until = current_time + 900  # 900 ثانية = 15 دقيقة
+                lockout_until = current_time + 900
                 is_locked = True
                 remaining_seconds = 900
-                login_attempts = 0 # إعادة ضبط العداد بعد القفل
+                login_attempts = 0
                 
     remaining_attempts = max(0, 5 - login_attempts)
     return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
