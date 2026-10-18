@@ -251,11 +251,8 @@ default_html_template = """
         .auction-header { display: flex; justify-content: space-between; align-items: center; }
         .auction-title { font-size: 16px; font-weight: bold; color: #fbbf24; }
         .auction-timer { background: rgba(217, 119, 6, 0.2); border: 1px solid #d97706; color: #fbbf24; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; }
-        
-        /* تعديل ارتفاع الصورة في الواجهة الرئيسية لتكون أصغر ومرتبة */
         .auction-images { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; background: #000; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 8px; margin-bottom: 5px; }
         .auction-images img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 6px; flex: 0 0 100%; background: #000; }
-        
         .auction-details { font-size: 13px; color: #ccc; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
         .bid-btn { background: #d97706; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; text-align: center; text-decoration: none; display: block; }
 
@@ -274,6 +271,7 @@ default_html_template = """
         .card-buttons { display: flex; flex-direction: column; gap: 6px; }
         .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; }
         .add-to-cart-btn { background: {{ config.colors.cart_btn }}; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; }
+        .share-card-btn { background: #2563eb; color: white; border: none; padding: 6px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; }
         .sold-btn-disabled { background: #555 !important; }
 
         .pagination { display: flex; justify-content: center; gap: 8px; margin: 30px 0 15px 0; flex-wrap: wrap; }
@@ -299,7 +297,7 @@ default_html_template = """
     </style>
 </head>
 <body>
-    <div id="toast" class="toast-msg">✅ تم الإضافة إلى السلة</div>
+    <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
 
     <div class="top-bar">
         <div class="dropdown">
@@ -385,6 +383,7 @@ default_html_template = """
                             {% if controls.enable_cart and not p.is_sold %}
                                 <button type="button" class="add-to-cart-btn" onclick="addToCart({{ p.id }})">أضف إلى السلة 🛒</button>
                             {% endif %}
+                            <button type="button" class="share-card-btn" onclick="shareProduct('{{ p.title }}', '{{ p.price }}', {{ p.id }})">مشاركة القطعة 🔗</button>
                         </div>
                     </div>
                 </div>
@@ -443,6 +442,25 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
+        function shareProduct(title, price, id) {
+            const productUrl = window.location.origin + '/product/' + id;
+            const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 ${title}\n💰 السعر: ${price}\n🔗 الرابط: ${productUrl}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: title,
+                    text: shareText,
+                    url: productUrl
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText);
+                const toast = document.getElementById('toast');
+                toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
+                toast.style.display = 'flex';
+                setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            }
+        }
+
         function addToCart(productId) {
             fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
             .then(response => response.json())
@@ -523,6 +541,137 @@ default_html_template = """
 </body>
 </html>
 """
+product_detail_template = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.title }} - {{ config.title }}</title>
+    <style>
+        body { background-color: {{ config.colors.bg_color }}; color: #ffffff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .detail-container { background: #111; border: 1px solid #222; border-radius: 14px; padding: 25px; width: 100%; max-width: 600px; box-shadow: 0 4px 25px rgba(0,0,0,0.9); margin-top: 20px; text-align: center; }
+        .gallery { display: flex; flex-direction: row; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
+        .gallery img { width: 100%; max-height: 500px; object-fit: contain; border-radius: 8px; background: #000; border: 1px solid #333; flex: 0 0 100%; }
+        .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
+        .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
+        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+        .buy-toggle-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
+        .share-btn { display: block; text-align: center; background: #2563eb; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
+        .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
+        .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
+        .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
+        .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; margin-bottom: 10px; }
+        
+        .toast-msg { position: fixed; bottom: 30px; background: #25d366; color: #000; padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
+    <div class="detail-container">
+        <h1 class="product-title">{{ product.title }}</h1>
+        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
+        {% if product.description %}
+        <div class="product-desc">
+            <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
+            {{ product.description }}
+        </div>
+        {% endif %}
+        <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
+        
+        <button class="share-btn" onclick="shareCurrentProduct()">مشاركة هذه القطعة 🔗</button>
+
+        {% if controls.enable_contact_btn and not product.is_sold %}
+            <button class="buy-toggle-btn" onclick="toggleCheckout()">{{ config.texts.contact_word }} 🛒</button>
+            <div id="checkoutForm" class="checkout-form {% if error %}active{% endif %}" style="display: {% if error %}block{% else %}none{% endif %};">
+                <h3 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">أدخل بيانات الشخصية لإتمام الشراء:</h3>
+                {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+                <form action="/buy-product/{{ product.id }}" method="POST">
+                    <label style="font-size: 12px; color: #ccc;">الاسم الثلاثي:</label>
+                    <input type="text" name="full_name" placeholder="الاسم الثلاثي" required>
+                    
+                    <label style="font-size: 12px; color: #ccc;">المحافظة:</label>
+                    <input type="text" name="province" placeholder="المحافظة (مثال: عمان)" required>
+                    
+                    <label style="font-size: 12px; color: #ccc;">الشارع:</label>
+                    <input type="text" name="street" placeholder="اسم الشارع أو المنطقة" required>
+                    
+                    <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label>
+                    <input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                    
+                    {% if controls.enable_cod_note and controls.cod_note_text %}
+                        <div style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; text-align: right; font-weight: bold;">
+                            {{ controls.cod_note_text }}
+                        </div>
+                    {% endif %}
+                    
+                    <button type="submit" class="checkout-submit">إرسال الطلب عبر الواتساب 🚀</button>
+                </form>
+            </div>
+        {% endif %}
+
+        {% if controls.enable_cart and not product.is_sold %}
+            <button type="button" class="buy-toggle-btn" style="background: {{ config.colors.cart_btn }}; margin-bottom: 15px;" onclick="addToCart({{ product.id }})">أضف إلى السلة 🛒</button>
+        {% elif product.is_sold %}
+            <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
+        {% endif %}
+        {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
+    </div>
+
+    <script>
+        function shareCurrentProduct() {
+            const productUrl = window.location.href;
+            const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 {{ product.title }}\n💰 السعر: {{ product.price }}\n🔗 الرابط: ${productUrl}`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: '{{ product.title }}',
+                    text: shareText,
+                    url: productUrl
+                }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText);
+                const toast = document.getElementById('toast');
+                toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
+                toast.style.display = 'flex';
+                setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            }
+        }
+
+        function toggleCheckout() {
+            const form = document.getElementById('checkoutForm');
+            if (form.style.display === 'block') {
+                form.style.display = 'none';
+            } else {
+                form.style.display = 'block';
+                form.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        function addToCart(productId) {
+            fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                const toast = document.getElementById('toast');
+                if(data.success) {
+                    toast.innerText = "✅ تم الإضافة إلى السلة";
+                    toast.style.background = "#25d366";
+                    toast.style.color = "#000";
+                } else {
+                    toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة";
+                    toast.style.background = "#dc2626";
+                    toast.style.color = "#fff";
+                }
+                toast.style.display = 'flex';
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, 3000);
+            });
+        }
+    </script>
+</body>
+</html>
+"""
+
 cart_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -718,115 +867,6 @@ reviews_page_template = """
         </div>
         <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
     </div>
-</body>
-</html>
-"""
-
-product_detail_template = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ product.title }} - {{ config.title }}</title>
-    <style>
-        body { background-color: {{ config.colors.bg_color }}; color: #ffffff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .detail-container { background: #111; border: 1px solid #222; border-radius: 14px; padding: 25px; width: 100%; max-width: 600px; box-shadow: 0 4px 25px rgba(0,0,0,0.9); margin-top: 20px; text-align: center; }
-        .gallery { display: flex; flex-direction: row; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
-        .gallery img { width: 100%; max-height: 500px; object-fit: contain; border-radius: 8px; background: #000; border: 1px solid #333; flex: 0 0 100%; }
-        .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
-        .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
-        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
-        .buy-toggle-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
-        .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
-        .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
-        .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
-        .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; margin-bottom: 10px; }
-        
-        .toast-msg { position: fixed; bottom: 30px; background: #25d366; color: #000; padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; gap: 8px; }
-    </style>
-</head>
-<body>
-    <div id="toast" class="toast-msg">✅ تم الإضافة إلى السلة</div>
-    <div class="detail-container">
-        <h1 class="product-title">{{ product.title }}</h1>
-        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
-        {% if product.description %}
-        <div class="product-desc">
-            <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
-            {{ product.description }}
-        </div>
-        {% endif %}
-        <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
-        
-        {% if controls.enable_contact_btn and not product.is_sold %}
-            <button class="buy-toggle-btn" onclick="toggleCheckout()">{{ config.texts.contact_word }} 🛒</button>
-            <div id="checkoutForm" class="checkout-form {% if error %}active{% endif %}" style="display: {% if error %}block{% else %}none{% endif %};">
-                <h3 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">أدخل بيانات الشخصية لإتمام الشراء:</h3>
-                {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
-                <form action="/buy-product/{{ product.id }}" method="POST">
-                    <label style="font-size: 12px; color: #ccc;">الاسم الثلاثي:</label>
-                    <input type="text" name="full_name" placeholder="الاسم الثلاثي" required>
-                    
-                    <label style="font-size: 12px; color: #ccc;">المحافظة:</label>
-                    <input type="text" name="province" placeholder="المحافظة (مثال: عمان)" required>
-                    
-                    <label style="font-size: 12px; color: #ccc;">الشارع:</label>
-                    <input type="text" name="street" placeholder="اسم الشارع أو المنطقة" required>
-                    
-                    <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label>
-                    <input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
-                    
-                    {% if controls.enable_cod_note and controls.cod_note_text %}
-                        <div style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; text-align: right; font-weight: bold;">
-                            {{ controls.cod_note_text }}
-                        </div>
-                    {% endif %}
-                    
-                    <button type="submit" class="checkout-submit">إرسال الطلب عبر الواتساب 🚀</button>
-                </form>
-            </div>
-        {% endif %}
-
-        {% if controls.enable_cart and not product.is_sold %}
-            <button type="button" class="buy-toggle-btn" style="background: {{ config.colors.cart_btn }}; margin-bottom: 15px;" onclick="addToCart({{ product.id }})">أضف إلى السلة 🛒</button>
-        {% elif product.is_sold %}
-            <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
-        {% endif %}
-        {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
-    </div>
-
-    <script>
-        function toggleCheckout() {
-            const form = document.getElementById('checkoutForm');
-            if (form.style.display === 'block') {
-                form.style.display = 'none';
-            } else {
-                form.style.display = 'block';
-                form.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-        function addToCart(productId) {
-            fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
-            .then(response => response.json())
-            .then(data => {
-                const toast = document.getElementById('toast');
-                if(data.success) {
-                    toast.innerText = "✅ تم الإضافة إلى السلة";
-                    toast.style.background = "#25d366";
-                    toast.style.color = "#000";
-                } else {
-                    toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة";
-                    toast.style.background = "#dc2626";
-                    toast.style.color = "#fff";
-                }
-                toast.style.display = 'flex';
-                setTimeout(() => {
-                    toast.style.display = 'none';
-                }, 3000);
-            });
-        }
-    </script>
 </body>
 </html>
 """
