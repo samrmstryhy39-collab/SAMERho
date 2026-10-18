@@ -251,8 +251,11 @@ default_html_template = """
         .auction-header { display: flex; justify-content: space-between; align-items: center; }
         .auction-title { font-size: 16px; font-weight: bold; color: #fbbf24; }
         .auction-timer { background: rgba(217, 119, 6, 0.2); border: 1px solid #d97706; color: #fbbf24; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; }
+        
+        /* تعديل ارتفاع الصورة في الواجهة الرئيسية لتكون أصغر ومرتبة */
         .auction-images { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; background: #000; padding: 8px; width: 100%; box-sizing: border-box; border-radius: 8px; margin-bottom: 5px; }
-        .auction-images img { width: 100%; max-height: 380px; object-fit: contain; border-radius: 6px; flex: 0 0 100%; background: #000; }
+        .auction-images img { width: 100%; max-height: 200px; object-fit: contain; border-radius: 6px; flex: 0 0 100%; background: #000; }
+        
         .auction-details { font-size: 13px; color: #ccc; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
         .bid-btn { background: #d97706; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; text-align: center; text-decoration: none; display: block; }
 
