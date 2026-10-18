@@ -92,6 +92,9 @@ site_controls = {
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
+    "enable_logo_pulse": True,
+    "logo_pulse_speed": "4s",
+    "logo_pulse_color": "#d97706",
     "admin_whatsapp": "962790000000",
     "social_links": [
         {"name": "إنستغرام", "url": "#"},
@@ -262,33 +265,24 @@ product_detail_template = """
         </div>
         {% endif %}
         <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
-        
         <button class="share-btn" onclick="shareCurrentProduct()">مشاركة هذه القطعة 🔗</button>
-
         {% if controls.enable_contact_btn and not product.is_sold %}
             <button class="buy-toggle-btn" onclick="toggleCheckout()">{{ config.texts.contact_word }} 🛒</button>
             <div id="checkoutForm" class="checkout-form {% if error %}active{% endif %}" style="display: {% if error %}block{% else %}none{% endif %};">
                 <h3 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">أدخل بيانات الشخصية لإتمام الشراء:</h3>
                 {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
                 <form action="/buy-product/{{ product.id }}" method="POST">
-                    <label style="font-size: 12px; color: #ccc;">الاسم الثلاثي:</label>
-                    <input type="text" name="full_name" placeholder="الاسم الثلاثي" required>
-                    <label style="font-size: 12px; color: #ccc;">المحافظة:</label>
-                    <input type="text" name="province" placeholder="المحافظة (مثال: عمان)" required>
-                    <label style="font-size: 12px; color: #ccc;">الشارع:</label>
-                    <input type="text" name="street" placeholder="اسم الشارع أو المنطقة" required>
-                    <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label>
-                    <input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                    <label style="font-size: 12px; color: #ccc;">الاسم الثلاثي:</label><input type="text" name="full_name" placeholder="الاسم الثلاثي" required>
+                    <label style="font-size: 12px; color: #ccc;">المحافظة:</label><input type="text" name="province" placeholder="المحافظة (مثال: عمان)" required>
+                    <label style="font-size: 12px; color: #ccc;">الشارع:</label><input type="text" name="street" placeholder="اسم الشارع أو المنطقة" required>
+                    <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label><input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
                     {% if controls.enable_cod_note and controls.cod_note_text %}
-                        <div style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; text-align: right; font-weight: bold;">
-                            {{ controls.cod_note_text }}
-                        </div>
+                        <div style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; text-align: right; font-weight: bold;">{{ controls.cod_note_text }}</div>
                     {% endif %}
                     <button type="submit" class="checkout-submit">إرسال الطلب عبر الواتساب 🚀</button>
                 </form>
             </div>
         {% endif %}
-
         {% if controls.enable_cart and not product.is_sold %}
             <button type="button" class="buy-toggle-btn" style="background: {{ config.colors.cart_btn }}; margin-bottom: 15px;" onclick="addToCart({{ product.id }})">أضف إلى السلة 🛒</button>
         {% elif product.is_sold %}
@@ -296,14 +290,12 @@ product_detail_template = """
         {% endif %}
         {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
     </div>
-
     <script>
         function shareCurrentProduct() {
             const productUrl = window.location.href;
             const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 {{ product.title }}\n💰 السعر: {{ product.price }}\n🔗 الرابط: ${productUrl}`;
-            if (navigator.share) {
-                navigator.share({ title: '{{ product.title }}', text: shareText, url: productUrl }).catch(() => {});
-            } else {
+            if (navigator.share) { navigator.share({ title: '{{ product.title }}', text: shareText, url: productUrl }).catch(() => {}); }
+            else {
                 navigator.clipboard.writeText(shareText);
                 const toast = document.getElementById('toast');
                 toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
@@ -321,15 +313,8 @@ product_detail_template = """
             .then(response => response.json())
             .then(data => {
                 const toast = document.getElementById('toast');
-                if(data.success) {
-                    toast.innerText = "✅ تم الإضافة إلى السلة";
-                    toast.style.background = "#25d366";
-                    toast.style.color = "#000";
-                } else {
-                    toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة";
-                    toast.style.background = "#dc2626";
-                    toast.style.color = "#fff";
-                }
+                if(data.success) { toast.innerText = "✅ تم الإضافة إلى السلة"; toast.style.background = "#25d366"; toast.style.color = "#000"; }
+                else { toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة"; toast.style.background = "#dc2626"; toast.style.color = "#fff"; }
                 toast.style.display = 'flex';
                 setTimeout(() => { toast.style.display = 'none'; }, 3000);
             });
@@ -377,9 +362,7 @@ cart_template = """
                                 <div class="cart-item-price">{{ item.price }}</div>
                             </div>
                         </a>
-                        <form action="/remove-from-cart/{{ item.cart_id }}" method="POST" style="margin:0;">
-                            <button type="submit" class="delete-btn">حذف</button>
-                        </form>
+                        <form action="/remove-from-cart/{{ item.cart_id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
                     </div>
                 {% endfor %}
             {% endif %}
@@ -415,7 +398,14 @@ default_html_template = """
 
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
-        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 16px; padding: 5px; box-shadow: 0 0 15px rgba(239, 68, 68, 0.35); width: 130px; height: 130px; overflow: hidden; box-sizing: border-box; }
+        
+        @keyframes customPulse {
+            0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 15px {{ controls.logo_pulse_color }}; }
+            50% { transform: scale(1.02); filter: brightness(1.15); box-shadow: 0 0 30px {{ controls.logo_pulse_color }}; }
+            100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 15px {{ controls.logo_pulse_color }}; }
+        }
+
+        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 16px; padding: 5px; width: 130px; height: 130px; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: customPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;{% endif %} }
         .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         
@@ -530,11 +520,7 @@ default_html_template = """
                 <span class="auction-timer" data-end="{{ a.end_time }}">⏳ جاري التحميل...</span>
             </div>
             {% if a.images and a.images|length > 0 %}
-            <div class="auction-images">
-                {% for img in a.images %}
-                    <img src="{{ img }}" alt="صورة المزاد">
-                {% endfor %}
-            </div>
+            <div class="auction-images">{% for img in a.images %}<img src="{{ img }}" alt="صورة المزاد">{% endfor %}</div>
             {% endif %}
             <div class="auction-details">
                 <span>السعر الحالي: 
@@ -542,9 +528,7 @@ default_html_template = """
                         {% set sorted_bids = a.bids|sort(attribute='amount', reverse=True) %}
                         <select style="background: #000; color: #25d366; border: 1px solid #333; padding: 4px 8px; border-radius: 6px; font-weight: bold; outline: none;">
                             <option value="{{ sorted_bids[0].amount }}">{{ sorted_bids[0].amount }} (بواسطة: {{ sorted_bids[0].name }})</option>
-                            {% for b in sorted_bids[1:] %}
-                                <option value="{{ b.amount }}">{{ b.amount }} (بواسطة: {{ b.name }})</option>
-                            {% endfor %}
+                            {% for b in sorted_bids[1:] %}<option value="{{ b.amount }}">{{ b.amount }} (بواسطة: {{ b.name }})</option>{% endfor %}
                         </select>
                     {% else %}
                         <b style="color: #25d366;">{{ a.current_price }}</b>
@@ -584,12 +568,9 @@ default_html_template = """
                 </div>
             {% endfor %}
         </div>
-
         {% if total_pages > 1 %}
         <div class="pagination" id="paginationSection">
-            {% for p_num in range(1, total_pages + 1) %}
-                <a href="/?page={{ p_num }}" class="page-link {% if p_num == current_page %}active{% endif %}">{{ p_num }}</a>
-            {% endfor %}
+            {% for p_num in range(1, total_pages + 1) %}<a href="/?page={{ p_num }}" class="page-link {% if p_num == current_page %}active{% endif %}">{{ p_num }}</a>{% endfor %}
         </div>
         {% endif %}
     </div>
@@ -637,20 +618,12 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
-        function toggleFilterMenu() {
-            document.getElementById("filterMenu").classList.toggle("filter-show");
-        }
-        function selectSort(sortType, sortName) {
-            document.getElementById("sortValue").value = sortType;
-            document.getElementById("filterMenu").classList.remove("filter-show");
-            filterAndSortProducts();
-        }
+        function toggleFilterMenu() { document.getElementById("filterMenu").classList.toggle("filter-show"); }
+        function selectSort(sortType, sortName) { document.getElementById("sortValue").value = sortType; document.getElementById("filterMenu").classList.remove("filter-show"); filterAndSortProducts(); }
         window.addEventListener('click', function(e) {
             if (!e.target.closest('.filter-dropdown-container')) {
                 var menu = document.getElementById("filterMenu");
-                if (menu && menu.classList.contains('filter-show')) {
-                    menu.classList.remove('filter-show');
-                }
+                if (menu && menu.classList.contains('filter-show')) { menu.classList.remove('filter-show'); }
             }
         });
         function addToCart(productId) {
@@ -658,22 +631,13 @@ default_html_template = """
             .then(response => response.json())
             .then(data => {
                 const toast = document.getElementById('toast');
-                if(data.success) {
-                    toast.innerText = "✅ تم الإضافة إلى السلة";
-                    toast.style.background = "#25d366";
-                    toast.style.color = "#000";
-                } else {
-                    toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة";
-                    toast.style.background = "#dc2626";
-                    toast.style.color = "#fff";
-                }
+                if(data.success) { toast.innerText = "✅ تم الإضافة إلى السلة"; toast.style.background = "#25d366"; toast.style.color = "#000"; }
+                else { toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة"; toast.style.background = "#dc2626"; toast.style.color = "#fff"; }
                 toast.style.display = 'flex';
                 setTimeout(() => { toast.style.display = 'none'; }, 3000);
             });
         }
-        function toggleDropdown() {
-            document.getElementById("settingsDropdown").classList.toggle("show");
-        }
+        function toggleDropdown() { document.getElementById("settingsDropdown").classList.toggle("show"); }
         window.onclick = function(event) {
             if (!event.target.matches('.settings-btn') && !event.target.closest('.settings-btn')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
@@ -689,9 +653,8 @@ default_html_template = """
                 const endTime = new Date(timer.getAttribute('data-end')).getTime();
                 const now = new Date().getTime();
                 const distance = endTime - now;
-                if (distance < 0) {
-                    timer.innerHTML = " انتهى المزاد ❌";
-                } else {
+                if (distance < 0) { timer.innerHTML = " انتهى المزاد ❌"; }
+                else {
                     const days = Math.floor(distance / (1000 * 60 * 60 * 24));
                     const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
@@ -723,14 +686,10 @@ default_html_template = """
             const grid = document.getElementById('productsGrid');
             const pagination = document.getElementById('paginationSection');
             if(!grid) return;
-            
             const filter = searchInput ? searchInput.value.toLowerCase() : '';
             const sortVal = sortInput ? sortInput.value : 'newest';
             const cards = Array.from(grid.getElementsByClassName('product-card'));
-            
-            if (pagination) {
-                pagination.style.display = (filter !== '' || sortVal !== 'newest') ? 'none' : 'flex';
-            }
+            if (pagination) { pagination.style.display = (filter !== '' || sortVal !== 'newest') ? 'none' : 'flex'; }
             cards.forEach(card => {
                 const title = card.getAttribute('data-title').toLowerCase();
                 card.style.display = title.includes(filter) ? "" : "none";
@@ -1018,6 +977,27 @@ admin_template = """
                     <button type="submit" style="margin-top: 15px;">حفظ التصميم</button>
                 </form>
             </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع وحركة النبض</span><span id="icon-sec_logo">▼</span></div>
+            <div id="sec_logo" class="collapsible-content">
+                <form action="/update-logo" method="POST" enctype="multipart/form-data">
+                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار في الموقع</label>
+                    <label>اختر صورة الشعار:</label><input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 12px;">
+                    <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
+                    <label class="checkbox-label"><input type="checkbox" name="enable_logo_pulse" {% if controls.enable_logo_pulse %}checked{% endif %}> تشغيل حركة النبض والتوهج المتحرك للصورة ✨</label>
+                    <label>سرعة النبض (بالثواني - كلما زاد الرقم زاد البطء):</label>
+                    <select name="logo_pulse_speed" style="background:#000; color:#fff; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px; width:100%;">
+                        <option value="6s" {% if controls.logo_pulse_speed == '6s' %}selected{% endif %}>بطيء جداً (6 ثواني)</option>
+                        <option value="4s" {% if controls.logo_pulse_speed == '4s' %}selected{% endif %}>متوسط (4 ثواني - موصى به)</option>
+                        <option value="2s" {% if controls.logo_pulse_speed == '2s' %}selected{% endif %}>سريع (ثانيتان)</option>
+                    </select>
+                    <label>لون التوهج والإضاءة:</label>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <input type="color" name="logo_pulse_color" value="{{ controls.logo_pulse_color }}">
+                        <span style="font-size: 12px; color: #aaa;">اختر لون التوهج المناسب للشعار (مثل الذهبي أو الأحمر)</span>
+                    </div>
+                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشعار ✅</button>
+                </form>
+            </div>
             <div class="collapsible-header" onclick="toggleSection('sec_auctions')"><span>🔨 إدارة وإطلاق المزادات</span><span id="icon-sec_auctions">▼</span></div>
             <div id="sec_auctions" class="collapsible-content">
                 <form action="/admin-add-auction" method="POST" enctype="multipart/form-data">
@@ -1080,14 +1060,6 @@ admin_template = """
                         </div>
                     {% endfor %}
                 </div>
-            </div>
-            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع</span><span id="icon-sec_logo">▼</span></div>
-            <div id="sec_logo" class="collapsible-content">
-                <form action="/update-logo" method="POST" enctype="multipart/form-data">
-                    <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار في الموقع</label>
-                    <label>اختر صورة الشعار:</label><input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
-                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ صورة الشعار ✅</button>
-                </form>
             </div>
             <div class="section-box">
                 <h3>➕ إضافة منتج جديد</h3>
@@ -1395,6 +1367,16 @@ def admin_add_product():
 def update_logo():
     global site_controls
     site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
+    site_controls['enable_logo_pulse'] = True if request.form.get('enable_logo_pulse') else False
+    
+    speed = request.form.get('logo_speed') or request.form.get('logo_pulse_speed')
+    if speed:
+        site_controls['logo_pulse_speed'] = speed
+        
+    color = request.form.get('logo_pulse_color')
+    if color:
+        site_controls['logo_pulse_color'] = color
+
     logo_file = request.files.get('logo_file')
     if logo_file and logo_file.filename != '':
         comp_logo = process_and_compress_image(logo_file)
