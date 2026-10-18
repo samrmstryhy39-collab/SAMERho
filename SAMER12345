@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
+From flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
 import os
 import base64
 from io import BytesIO
@@ -89,7 +89,6 @@ site_controls = {
     "enable_cart": True,
     "enable_cod_note": True,
     "enable_forgot_pass": True,
-    "enable_scroll_top": True,
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
@@ -190,7 +189,6 @@ site_config = {
         "product_title": "#ffffff",        
         "product_price": "#25d366",        
         "whatsapp_btn": "#25d366",         
-        "share_btn_color": "#25d366",      
         "cart_btn": "#dc2626",             
         "toggle_btn": "#25d366",           
         "form_main_title": "#ffffff",      
@@ -217,8 +215,7 @@ color_names_ar = {
     "product_bg": "لون خلفية بطاقة/مربع المنتج",
     "product_title": "لون عنوان المنتج",
     "product_price": "لون سعر المنتج والكمية",
-    "whatsapp_btn": "لون زر التفاصيل والتواصل",
-    "share_btn_color": "لون زر مشاركة المنتج 🔗",
+    "whatsapp_btn": "لون زر التفاصيل / التواصل",
     "cart_btn": "لون خلفية زر أضف إلى السلة",
     "toggle_btn": "لون زر فتح وإغلاق قائمة الإضافة",
     "form_main_title": "لون عنوان نموذج الإضافة",
@@ -247,7 +244,7 @@ product_detail_template = """
         .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
         .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
         .buy-toggle-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
-        .share-btn { display: block; text-align: center; background: {{ config.colors.share_btn_color }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
+        .share-btn { display: block; text-align: center; background: #2563eb; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
         .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
         .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
         .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
@@ -375,7 +372,6 @@ cart_template = """
 </body>
 </html>
 """
-
 default_html_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -387,11 +383,11 @@ default_html_template = """
         body { background-color: {{ config.colors.bg_color }}; {% if config.bg_image %}background-image: url('{{ config.bg_image }}'); background-size: cover; background-position: center; background-attachment: fixed; {% endif %} font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
         {% if config.bg_image %}body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: -1; }{% endif %}
         
-        .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; position: relative; z-index: 100; }
+        .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; position: relative; }
         .dropdown { position: relative; display: inline-block; }
         .settings-btn { background: #111111; border: 1px solid #333333; padding: 10px 18px; border-radius: 12px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .settings-btn:hover { background: #1a1a1a; border-color: #25d366; }
-        .dropdown-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 190px; box-shadow: 0px 8px 16px rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 8px; z-index: 200; overflow: hidden; margin-top: 5px; }
+        .dropdown-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 190px; box-shadow: 0px 8px 16px rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 8px; z-index: 10; overflow: hidden; margin-top: 5px; }
         .dropdown-content a { color: #fff; padding: 10px 14px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; font-size: 13px; text-align: right; border-bottom: 1px solid #222; }
         .dropdown-content a:last-child { border-bottom: none; }
         .dropdown-content a:hover { background-color: #222; color: #25d366; }
@@ -419,7 +415,7 @@ default_html_template = """
         .filter-dropdown-container { position: relative; display: inline-block; height: 46px; }
         .filter-icon-btn { background: {{ config.colors.filter_btn_bg }}; color: {{ config.colors.filter_btn_text }}; border: 1px solid #333; width: 46px; height: 46px; border-radius: 10px; font-size: 18px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; box-sizing: border-box; }
         .filter-icon-btn:hover { border-color: #25d366; }
-        .filter-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 210px; box-shadow: 0px 8px 16px rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 8px; z-index: 200; overflow: hidden; margin-top: 5px; }
+        .filter-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 210px; box-shadow: 0px 8px 16px rgba(0,0,0,0.8); border: 1px solid #333; border-radius: 8px; z-index: 10; overflow: hidden; margin-top: 5px; }
         .filter-content div { color: {{ config.colors.filter_btn_text }}; padding: 10px 14px; cursor: pointer; font-size: 13px; text-align: right; border-bottom: 1px solid #222; }
         .filter-content div:last-child { border-bottom: none; }
         .filter-content div:hover { background-color: #222; color: #25d366; }
@@ -441,27 +437,16 @@ default_html_template = """
         .product-card { background: {{ config.colors.product_bg }}; border: 1px solid #222222; border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; position: relative; }
         .product-card.sold-card { opacity: 0.65; }
         .sold-badge { position: absolute; top: 10px; right: 10px; background: #dc2626; color: white; padding: 4px 10px; font-size: 11px; font-weight: bold; border-radius: 4px; z-index: 2; }
-        .product-images { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; background: #000; padding: 8px; width: 100%; box-sizing: border-box; cursor: pointer; }
+        .product-images { display: flex; flex-direction: row; overflow-x: auto; gap: 8px; background: #000; padding: 8px; width: 100%; box-sizing: border-box; }
         .product-images img { width: 100%; height: 140px; object-fit: cover; border-radius: 6px; flex: 0 0 100%; }
         .product-info { padding: 12px; }
-        .product-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: {{ config.colors.product_title }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+        .product-title { font-size: 14px; font-weight: bold; margin-bottom: 5px; color: {{ config.colors.product_title }}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .product-price { color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 8px; font-size: 13px; }
         
         .card-buttons { display: flex; flex-direction: column; gap: 6px; }
-        .card-buttons-row { display: flex; gap: 5px; width: 100%; }
-        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; flex: 1; border: none; cursor: pointer; box-sizing: border-box; }
-        .quick-share-card-btn { display: flex; align-items: center; justify-content: center; background: {{ config.colors.share_btn_color }}; color: white; padding: 7px; border-radius: 6px; border: none; cursor: pointer; flex: 1; font-weight: bold; font-size: 11px; text-decoration: none; box-sizing: border-box; gap: 4px; }
-        .quick-share-card-btn svg { width: 14px; height: 14px; fill: currentColor; }
+        .contact-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 7px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 11px; }
         .add-to-cart-btn { background: {{ config.colors.cart_btn }}; color: white; border: none; padding: 7px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; text-align: center; width: 100%; text-decoration: none; }
         .sold-btn-disabled { background: #555 !important; }
-
-        /* نافذة المعاينة السريعة Modal */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
-        .modal-content { background: #111; border: 1px solid #333; border-radius: 14px; width: 100%; max-width: 550px; max-height: 90vh; overflow-y: auto; padding: 20px; box-sizing: border-box; position: relative; text-align: right; box-shadow: 0 10px 30px rgba(0,0,0,0.9); }
-        .modal-close { position: absolute; top: 15px; left: 15px; background: #dc2626; color: white; border: none; width: 30px; height: 30px; border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; }
-
-        /* زر العودة إلى الأعلى */
-        .scroll-top-btn { display: none; position: fixed; bottom: 25px; right: 25px; background: {{ config.colors.whatsapp_btn }}; color: #fff; width: 42px; height: 42px; border-radius: 50%; border: 2px solid #fff; font-size: 18px; font-weight: bold; cursor: pointer; z-index: 500; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
 
         .pagination { display: flex; justify-content: center; gap: 8px; margin: 30px 0 15px 0; flex-wrap: wrap; }
         .page-link { background: #111; border: 1px solid #333; color: #fff; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
@@ -486,28 +471,11 @@ default_html_template = """
     </style>
 </head>
 <body>
-    <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
-
-    <!-- نافذة المعاينة السريعة Modal -->
-    <div id="quickViewModal" class="modal-overlay" onclick="closeQuickView(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <button class="modal-close" onclick="closeQuickViewDirect()">✕</button>
-            <h2 id="modalTitle" style="color: {{ config.colors.product_title }}; font-size: 18px; margin-bottom: 10px;"></h2>
-            <div id="modalPrice" style="color: {{ config.colors.product_price }}; font-weight: bold; font-size: 15px; margin-bottom: 12px;"></div>
-            <div id="modalImages" style="display: flex; gap: 8px; overflow-x: auto; background: #000; padding: 8px; border-radius: 8px; margin-bottom: 12px;"></div>
-            <div id="modalDesc" style="color: #ddd; font-size: 13px; line-height: 1.6; white-space: pre-wrap; margin-bottom: 15px; background: #000; padding: 12px; border-radius: 8px;"></div>
-            <div id="modalButtons"></div>
-        </div>
-    </div>
-
-    <!-- زر العودة إلى الأعلى -->
-    {% if controls.enable_scroll_top %}
-    <button id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" title="العودة للأعلى">▲</button>
-    {% endif %}
+    <div id="toast" class="toast-msg">✅ تم الإضافة إلى السلة</div>
 
     <div class="top-bar">
         <div class="dropdown">
-            {% if vis.settings_btn_text %}<button type="button" onclick="toggleDropdown()" class="settings-btn">{{ config.texts.settings_btn_text }}</button>{% endif %}
+            {% if vis.settings_btn_text %}<button onclick="toggleDropdown()" class="settings-btn">{{ config.texts.settings_btn_text }}</button>{% endif %}
             <div id="settingsDropdown" class="dropdown-content">
                 {% if controls.enable_cart %}
                     <a href="/cart">🛒 سلة المشتريات <span class="cart-badge">{{ cart_count }}</span></a>
@@ -518,7 +486,6 @@ default_html_template = """
             </div>
         </div>
     </div>
-    
     <div class="header">
         {% if controls.use_logo_image and controls.logo_image %}
             <div class="logo-img-container"><img src="{{ controls.logo_image }}" alt="شعار الموقع"></div>
@@ -583,23 +550,15 @@ default_html_template = """
             {% for p in page_products %}
                 <div class="product-card {% if p.is_sold %}sold-card{% endif %}" data-title="{{ p.title }}" data-price="{{ p.numeric_price }}" data-id="{{ p.id }}">
                     {% if p.is_sold %}<div class="sold-badge">تم البيع</div>{% endif %}
-                    <div class="product-images" onclick="openQuickView({{ p.id }}, '{{ p.title | replace("'", "\\'") }}', '{{ p.price }}', '{{ p.description | replace(chr(10), ' ') | replace("'", "\\'") }}', {% if p.is_sold %}true{% else %}false{% endif %})">
-                        {% for img in p.images %}<img src="{{ img }}" alt="صورة">{% endfor %}
-                    </div>
+                    <div class="product-images">{% for img in p.images %}<img src="{{ img }}" alt="صورة">{% endfor %}</div>
                     <div class="product-info">
-                        <div class="product-title" onclick="openQuickView({{ p.id }}, '{{ p.title | replace("'", "\\'") }}', '{{ p.price }}', '{{ p.description | replace(chr(10), ' ') | replace("'", "\\'") }}', {% if p.is_sold %}true{% else %}false{% endif %})" title="{{ p.title }}">{{ p.title }}</div>
+                        <div class="product-title" title="{{ p.title }}">{{ p.title }}</div>
                         <div class="product-price">{{ p.price }} {% if p.quantity %} | الكمية: {{ p.quantity }}{% endif %}</div>
                         <div class="card-buttons">
                             {% if vis.view_details %}
-                                <div class="card-buttons-row">
-                                    <button type="button" class="contact-btn {% if p.is_sold %}sold-btn-disabled{% endif %}" onclick="openQuickView({{ p.id }}, '{{ p.title | replace("'", "\\'") }}', '{{ p.price }}', '{{ p.description | replace(chr(10), ' ') | replace("'", "\\'") }}', {% if p.is_sold %}true{% else %}false{% endif %})">
-                                        {% if p.is_sold %}تم البيع{% else %}{{ config.texts.view_details }}{% endif %}
-                                    </button>
-                                    <button type="button" class="quick-share-card-btn" onclick="quickShareProduct('{{ p.title | replace("'", "\\'") }}', '{{ p.price }}', '/product/{{ p.id }}')" title="مشاركة القطعة">
-                                        <svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92c0-1.61-1.31-2.92-2.92-2.92z"/></svg>
-                                        مشاركة
-                                    </button>
-                                </div>
+                                <a href="/product/{{ p.id }}" class="contact-btn {% if p.is_sold %}sold-btn-disabled{% endif %}">
+                                    {% if p.is_sold %}تم البيع (عرض التفاصيل){% else %}{{ config.texts.view_details }}{% endif %}
+                                </a>
                             {% endif %}
                             {% if controls.enable_cart and not p.is_sold %}
                                 <button type="button" class="add-to-cart-btn" onclick="addToCart({{ p.id }})">أضف إلى السلة 🛒</button>
@@ -617,7 +576,7 @@ default_html_template = """
     </div>
 
     {% if not controls.block_posting and (vis.toggle_btn_open or vis.toggle_btn_close) %}
-    <button type="button" class="toggle-form-btn" onclick="toggleForm()" id="toggleBtn">{{ config.texts.toggle_btn_open }}</button>
+    <button class="toggle-form-btn" onclick="toggleForm()" id="toggleBtn">{{ config.texts.toggle_btn_open }}</button>
     <div class="container {% if error %}active{% endif %}" id="formContainer">
         {% if vis.form_main_title %}<h2 class="form-main-title">{{ config.texts.form_main_title }}</h2>{% endif %}
         {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
@@ -658,103 +617,15 @@ default_html_template = """
         {% if controls.enable_copyright %}<a href="/copyright" class="footer-copyright">حقوق النشر والشروط</a>{% endif %}
     </footer>
     {% endif %}
-    
     <script>
-        // زر العودة للأعلى
-        const scrollBtn = document.getElementById('scrollTopBtn');
-        window.addEventListener('scroll', () => {
-            if (scrollBtn) {
-                if (window.scrollY > 300) { scrollBtn.style.display = 'flex'; }
-                else { scrollBtn.style.display = 'none'; }
-            }
-        });
-        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-
-        // نافذة المعاينة السريعة
-        function openQuickView(productId, title, price, description, isSold) {
-            const modal = document.getElementById('quickViewModal');
-            document.getElementById('modalTitle').innerText = title;
-            document.getElementById('modalPrice').innerText = price;
-            document.getElementById('modalDesc').innerText = description ? "قصة القطعة:\n" + description : "لا توجد تفاصيل إضافية.";
-            
-            const card = document.querySelector(`.product-card[data-id='${productId}']`);
-            const imgContainer = document.getElementById('modalImages');
-            imgContainer.innerHTML = '';
-            if (card) {
-                const imgs = card.querySelectorAll('.product-images img');
-                imgs.forEach(img => {
-                    const clone = img.cloneNode(true);
-                    clone.style.width = '100%';
-                    clone.style.maxHeight = '350px';
-                    clone.style.objectFit = 'contain';
-                    clone.style.flex = '0 0 100%';
-                    imgContainer.appendChild(clone);
-                });
-            }
-
-            const btnContainer = document.getElementById('modalButtons');
-            btnContainer.innerHTML = `
-                <a href="/product/${productId}" style="display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 10px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px; margin-bottom: 8px;">فتح صفحة التفاصيل الكاملة 📌</a>
-            `;
-            modal.style.display = 'flex';
-        }
-        function closeQuickView(e) { if(e.target.id === 'quickViewModal') { document.getElementById('quickViewModal').style.display = 'none'; } }
-        function closeQuickViewDirect() { document.getElementById('quickViewModal').style.display = 'none'; }
-
-        // المشاركة السريعة
-        function quickShareProduct(title, price, path) {
-            const productUrl = window.location.origin + path;
-            const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 ${title}\n💰 السعر: ${price}\n🔗 الرابط: ${productUrl}`;
-            if (navigator.share) { navigator.share({ title: title, text: shareText, url: productUrl }).catch(() => {}); }
-            else {
-                navigator.clipboard.writeText(shareText);
-                const toast = document.getElementById('toast');
-                toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
-                toast.style.display = 'flex';
-                setTimeout(() => { toast.style.display = 'none'; }, 3000);
-            }
-        }
-
-        // قائمة الإعدادات (Dropdown)
-        function toggleDropdown() {
-            const dropdown = document.getElementById("settingsDropdown");
-            if (dropdown) {
-                dropdown.classList.toggle("show");
-            }
-        }
-
-        function toggleFilterMenu() { 
-            const menu = document.getElementById("filterMenu");
-            if(menu) menu.classList.toggle("filter-show"); 
-        }
-
-        function selectSort(sortType, sortName) { 
-            const sortInput = document.getElementById("sortValue");
-            if(sortInput) sortInput.value = sortType; 
-            const menu = document.getElementById("filterMenu");
-            if(menu) menu.classList.remove("filter-show"); 
-            filterAndSortProducts(); 
-        }
-
-        // إغلاق القوائم عند النقر خارجها
-        window.addEventListener('click', function(event) {
-            if (!event.target.matches('.settings-btn') && !event.target.closest('.settings-btn')) {
-                var dropdowns = document.getElementsByClassName("dropdown-content");
-                for (var i = 0; i < dropdowns.length; i++) {
-                    var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) { 
-                        openDropdown.classList.remove('show'); 
-                    }
-                }
-            }
-            if (!event.target.closest('.filter-dropdown-container')) {
+        function toggleFilterMenu() { document.getElementById("filterMenu").classList.toggle("filter-show"); }
+        function selectSort(sortType, sortName) { document.getElementById("sortValue").value = sortType; document.getElementById("filterMenu").classList.remove("filter-show"); filterAndSortProducts(); }
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.filter-dropdown-container')) {
                 var menu = document.getElementById("filterMenu");
-                if (menu && menu.classList.contains('filter-show')) { 
-                    menu.classList.remove('filter-show'); 
-                }
+                if (menu && menu.classList.contains('filter-show')) { menu.classList.remove('filter-show'); }
             }
         });
-
         function addToCart(productId) {
             fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
             .then(response => response.json())
@@ -766,7 +637,16 @@ default_html_template = """
                 setTimeout(() => { toast.style.display = 'none'; }, 3000);
             });
         }
-
+        function toggleDropdown() { document.getElementById("settingsDropdown").classList.toggle("show"); }
+        window.onclick = function(event) {
+            if (!event.target.matches('.settings-btn') && !event.target.closest('.settings-btn')) {
+                var dropdowns = document.getElementsByClassName("dropdown-content");
+                for (var i = 0; i < dropdowns.length; i++) {
+                    var openDropdown = dropdowns[i];
+                    if (openDropdown.classList.contains('show')) { openDropdown.classList.remove('show'); }
+                }
+            }
+        }
         function updateTimers() {
             const timers = document.querySelectorAll('.auction-timer');
             timers.forEach(timer => {
@@ -786,38 +666,19 @@ default_html_template = """
         setInterval(updateTimers, 1000);
         updateTimers();
 
-        // زر فتح نموذج الإضافة
         function toggleForm() {
             const container = document.getElementById('formContainer');
             const btn = document.getElementById('toggleBtn');
-            if (!container || !btn) return;
-            if (container.style.display === 'block') { 
-                container.style.display = 'none'; 
-                btn.innerText = '{{ config.texts.toggle_btn_open }}'; 
-            } else { 
-                container.style.display = 'block'; 
-                btn.innerText = '{{ config.texts.toggle_btn_close }}'; 
-                container.scrollIntoView({ behavior: 'smooth' }); 
-            }
+            if (container.style.display === 'block') { container.style.display = 'none'; btn.innerText = '{{ config.texts.toggle_btn_open }}'; }
+            else { container.style.display = 'block'; btn.innerText = '{{ config.texts.toggle_btn_close }}'; container.scrollIntoView({ behavior: 'smooth' }); }
         }
-
         window.onload = function() {
             {% if error %}
                 const container = document.getElementById('formContainer');
-                if(container) { 
-                    container.style.display = 'block'; 
-                    const btn = document.getElementById('toggleBtn');
-                    if(btn) btn.innerText = '{{ config.texts.toggle_btn_close }}'; 
-                }
+                if(container) { container.style.display = 'block'; document.getElementById('toggleBtn').innerText = '{{ config.texts.toggle_btn_close }}'; }
             {% endif %}
         };
-
-        function showCount(input) { 
-            if(input.files.length > 0) { 
-                const fc = document.getElementById('file-count');
-                if(fc) fc.innerText = "✅ تم اختيار " + input.files.length + " صورة."; 
-            } 
-        }
+        function showCount(input) { if(input.files.length > 0) { document.getElementById('file-count').innerText = "✅ تم اختيار " + input.files.length + " صورة."; } }
         
         function filterAndSortProducts() {
             const searchInput = document.getElementById('searchInput');
@@ -847,9 +708,7 @@ default_html_template = """
     </script>
 </body>
 </html>
-"""
-
-auction_detail_template = """
+"""auction_detail_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
@@ -1078,7 +937,6 @@ admin_template = """
                 <form action="/update-controls" method="POST">
                     <label class="checkbox-label"><input type="checkbox" name="enable_cart" {% if controls.enable_cart %}checked{% endif %}> تفعيل سلة المشتريات وزر "أضف إلى السلة"</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_auctions" {% if controls.enable_auctions %}checked{% endif %}> تفعيل قسم المزادات</label>
-                    <label class="checkbox-label"><input type="checkbox" name="enable_scroll_top" {% if controls.enable_scroll_top %}checked{% endif %}> تفعيل زر "العودة إلى الأعلى" في المتجر</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_forgot_pass" {% if controls.enable_forgot_pass %}checked{% endif %}> تفعيل زر "نسيت كلمة السر" في صفحة الدخول</label>
                     <label class="checkbox-label"><input type="checkbox" name="block_posting" {% if controls.block_posting %}checked{% endif %}> منع المستخدمين من الإضافة</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_search" {% if controls.enable_search %}checked{% endif %}> تفعيل البحث</label>
@@ -1529,7 +1387,6 @@ def update_controls():
     global site_controls
     site_controls['enable_cart'] = True if request.form.get('enable_cart') == 'on' else False
     site_controls['enable_auctions'] = True if request.form.get('enable_auctions') == 'on' else False
-    site_controls['enable_scroll_top'] = True if request.form.get('enable_scroll_top') == 'on' else False
     site_controls['enable_forgot_pass'] = True if request.form.get('enable_forgot_pass') == 'on' else False
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
