@@ -32,6 +32,8 @@ site_controls = {
     "enable_reviews_page": True,  
     "enable_auctions": True,      
     "enable_cart": True,
+    "enable_cod_note": True, # تفعيل/إيقاف جملة الدفع عند الاستلام
+    "cod_note_text": "الدفع عند الاستلام 💵", # النص الافتراضي للتوضيح
     "use_logo_image": False,
     "logo_image": "",
     "admin_whatsapp": "962790000000",
@@ -690,6 +692,12 @@ product_detail_template = """
                     <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label>
                     <input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
                     
+                    {% if controls.enable_cod_note and controls.cod_note_text %}
+                        <div style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; text-align: right; font-weight: bold;">
+                            {{ controls.cod_note_text }}
+                        </div>
+                    {% endif %}
+                    
                     <button type="submit" class="checkout-submit">إرسال الطلب عبر الواتساب 🚀</button>
                 </form>
             </div>
@@ -820,6 +828,19 @@ admin_template = """
                 </form>
             </div>
 
+            <div class="collapsible-header" onclick="toggleSection('sec_cod')">
+                <span>💵 إعدادات جملة الدفع عند الاستلام</span>
+                <span id="icon-sec_cod">▼</span>
+            </div>
+            <div id="sec_cod" class="collapsible-content">
+                <form action="/update-cod-settings" method="POST">
+                    <label class="checkbox-label"><input type="checkbox" name="enable_cod_note" {% if controls.enable_cod_note %}checked{% endif %}> تفعيل ظهور جملة الدفع عند الاستلام تحت رقم الهاتف</label>
+                    <label>نص العبارة التوضيحية:</label>
+                    <input type="text" name="cod_note_text" value="{{ controls.cod_note_text }}" placeholder="مثال: الدفع عند الاستلام 💵" required>
+                    <button type="submit" style="margin-top: 10px;">حفظ إعدادات العبارة</button>
+                </form>
+            </div>
+
             <div class="collapsible-header" onclick="toggleSection('sec1')">
                 <span>⚙️ إدارة الخصائص والميزات العامة</span>
                 <span id="icon-sec1">▼</span>
@@ -839,7 +860,7 @@ admin_template = """
             </div>
 
             <div class="collapsible-header" onclick="toggleSection('sec2')">
-                <span>📝 إدارة النصوص والظهور (ومنها زر تثبيت المزايدة)</span>
+                <span>📝 إدارة النصوص والظهور</span>
                 <span id="icon-sec2">▼</span>
             </div>
             <div id="sec2" class="collapsible-content">
@@ -1149,7 +1170,6 @@ def place_bid(a_id):
 
     bid_amount = int(bid_amount_str)
 
-    # التحقق من شرط الحد الأقصى للمنتج
     if auction.get('max_price'):
         try:
             max_val = int(re.sub(r'[^0-9]', '', str(auction['max_price'])))
@@ -1175,7 +1195,6 @@ def place_bid(a_id):
             "amount": bid_amount
         })
         
-        # ترتيب المزايدات تنازلياً وتحديث السعر الحالي لأعلى سعر
         auction['bids'] = sorted(auction['bids'], key=lambda x: x['amount'], reverse=True)
         top_bid = auction['bids'][0]
         auction['current_price'] = f"{top_bid['amount']} (بواسطة: {top_bid['name']})"
@@ -1225,6 +1244,15 @@ def update_admin_whatsapp():
     whatsapp = request.form.get('admin_whatsapp', '').strip()
     if whatsapp:
         site_controls['admin_whatsapp'] = whatsapp
+    return redirect(url_for('admin'))
+
+@app.route('/update-cod-settings', methods=['POST'])
+def update_cod_settings():
+    global site_controls
+    site_controls['enable_cod_note'] = True if request.form.get('enable_cod_note') == 'on' else False
+    text = request.form.get('cod_note_text', '').strip()
+    if text:
+        site_controls['cod_note_text'] = text
     return redirect(url_for('admin'))
 
 @app.route('/update-password', methods=['POST'])
