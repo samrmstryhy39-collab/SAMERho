@@ -89,6 +89,7 @@ site_controls = {
     "enable_auctions": True,      
     "enable_cart": True,
     "enable_cod_note": True,
+    "enable_forgot_pass": True, # تفعيل/إطفاء زر نسيت كلمة السر
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
@@ -912,9 +913,11 @@ admin_template = """
                 </form>
                 {% if error %}<p style="color: #ef4444; text-align: center; font-size: 13px; margin-top: 10px;">❌ رمز المرور غير صحيح! (المحاولات المتبقية: {{ remaining_attempts }})</p>{% endif %}
                 
+                {% if controls.enable_forgot_pass %}
                 <a href="https://wa.me/{{ controls.admin_whatsapp }}?text={{ 'مرحباً سامر، لقد نسيت كلمة مرور لوحة التحكم الخاصة بمتجر عتيق، أرجو مساعدتي في استرجاعها.' | urlencode }}" target="_blank" class="forgot-pass-btn">
                     🔑 نسيت كلمة السر؟ (إرسال تنبيه واتساب)
                 </a>
+                {% endif %}
             {% endif %}
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
@@ -966,6 +969,7 @@ admin_template = """
                 <form action="/update-controls" method="POST">
                     <label class="checkbox-label"><input type="checkbox" name="enable_cart" {% if controls.enable_cart %}checked{% endif %}> تفعيل سلة المشتريات وزر "أضف إلى السلة"</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_auctions" {% if controls.enable_auctions %}checked{% endif %}> تفعيل قسم المزادات</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_forgot_pass" {% if controls.enable_forgot_pass %}checked{% endif %}> تفعيل زر "نسيت كلمة السر" في صفحة الدخول</label>
                     <label class="checkbox-label"><input type="checkbox" name="block_posting" {% if controls.block_posting %}checked{% endif %}> منع المستخدمين من الإضافة</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_search" {% if controls.enable_search %}checked{% endif %}> تفعيل البحث</label>
                     <label class="checkbox-label"><input type="checkbox" name="enable_contact_btn" {% if controls.enable_contact_btn %}checked{% endif %}> تفعيل زر الشراء</label>
@@ -1539,6 +1543,7 @@ def update_controls():
     global site_controls
     site_controls['enable_cart'] = True if request.form.get('enable_cart') == 'on' else False
     site_controls['enable_auctions'] = True if request.form.get('enable_auctions') == 'on' else False
+    site_controls['enable_forgot_pass'] = True if request.form.get('enable_forgot_pass') == 'on' else False
     site_controls['block_posting'] = True if request.form.get('block_posting') == 'on' else False
     site_controls['enable_search'] = True if request.form.get('enable_search') == 'on' else False
     site_controls['enable_contact_btn'] = True if request.form.get('enable_contact_btn') == 'on' else False
