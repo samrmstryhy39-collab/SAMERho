@@ -99,6 +99,7 @@ site_controls = {
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
+    "logo_size": "130px",  # حجم الشعار الافتراضي
     "enable_logo_pulse": True,
     "logo_pulse_speed": "4s",
     "logo_pulse_color": "#d97706",
@@ -112,6 +113,7 @@ site_controls = {
 
 text_visibility = {
     "settings_btn_text": True,
+    "subtitle": True,  # إمكانية تفعيل/إطفاء جملة لكل قطعة حكاية
     "heading_products": True,
     "no_products": True,
     "heading_auctions": True,
@@ -151,6 +153,7 @@ site_config = {
     "bg_image": "",
     "texts": {
         "settings_btn_text": "⚙️ الإعدادات ▼",
+        "subtitle": "لكل قطعة حكاية",  # النص القابل للتعديل
         "heading_products": "المنتجات المعروضه",
         "no_products": "لا توجد منتجات معروضة حالياً.",
         "heading_auctions": "🔥 المزادات الحالية المشتعلة",
@@ -419,7 +422,7 @@ default_html_template = """
             100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 15px {{ controls.logo_pulse_color }}; }
         }
 
-        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 50%; padding: 5px; width: 130px; height: 130px; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: customPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;{% endif %} }
+        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 50%; padding: 5px; width: {{ controls.logo_size }}; height: {{ controls.logo_size }}; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: customPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;{% endif %} }
         .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         
@@ -529,7 +532,7 @@ default_html_template = """
         {% else %}
             <h1 class="glass-title">{{ config.title }}</h1>
         {% endif %}
-        <p>{{ config.subtitle }}</p>
+        {% if vis.subtitle %}<p>{{ config.texts.subtitle }}</p>{% endif %}
     </div>
     
     {% if controls.enable_search and vis.search_placeholder %}
@@ -1064,7 +1067,7 @@ admin_template = """
             <div id="sec3" class="collapsible-content">
                 <form action="/update-config" method="POST" enctype="multipart/form-data">
                     <label>اسم الموقع:</label><input type="text" name="title" value="{{ config.title }}" required>
-                    <label>وصف الموقع:</label><input type="text" name="subtitle" value="{{ config.subtitle }}" required>
+                    <label>وصف الموقع الأساسي:</label><input type="text" name="subtitle" value="{{ config.subtitle }}" required>
                     <label>صورة الخلفية:</label><input type="file" name="bg_image_file" accept="image/*" style="margin-bottom: 10px; color: #fff;">
                     {% for color_key, color_val in config.colors.items() %}
                     <div class="row-item">
@@ -1075,25 +1078,32 @@ admin_template = """
                     <button type="submit" style="margin-top: 15px;">حفظ التصميم</button>
                 </form>
             </div>
-            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع الدائري وحركة النبض</span><span id="icon-sec_logo">▼</span></div>
+            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع الدائري وحجمه والنبض</span><span id="icon-sec_logo">▼</span></div>
             <div id="sec_logo" class="collapsible-content">
                 <form action="/update-logo" method="POST" enctype="multipart/form-data">
                     <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار الدائري في الموقع</label>
                     <label>اختر صورة الشعار (موصى بها مربعة لتبدو دائرية فخمة):</label><input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 12px;">
+                    <label>حجم الشعار الدائري:</label>
+                    <select name="logo_size" style="background:#000; color:#fff; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px; width:100%;">
+                        <option value="90px" {% if controls.logo_size == '90px' %}selected{% endif %}>صغير (90 بكسل)</option>
+                        <option value="130px" {% if controls.logo_size == '130px' %}selected{% endif %}>وسط (130 بكسل - موصى به)</option>
+                        <option value="170px" {% if controls.logo_size == '170px' %}selected{% endif %}>كبير (170 بكسل)</option>
+                        <option value="210px" {% if controls.logo_size == '210px' %}selected{% endif %}>كبير جداً (210 بكسل)</option>
+                    </select>
                     <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
                     <label class="checkbox-label"><input type="checkbox" name="enable_logo_pulse" {% if controls.enable_logo_pulse %}checked{% endif %}> تشغيل حركة النبض والتوهج المتحرك للصورة ✨</label>
-                    <label>سرعة النبض (بالثواني - كلما زاد الرقم زاد البطء):</label>
+                    <label>سرعة النبض (بالثواني):</label>
                     <select name="logo_pulse_speed" style="background:#000; color:#fff; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px; width:100%;">
                         <option value="6s" {% if controls.logo_pulse_speed == '6s' %}selected{% endif %}>بطيء جداً (6 ثواني)</option>
-                        <option value="4s" {% if controls.logo_pulse_speed == '4s' %}selected{% endif %}>متوسط (4 ثواني - موصى به)</option>
+                        <option value="4s" {% if controls.logo_pulse_speed == '4s' %}selected{% endif %}>متوسط (4 ثواني)</option>
                         <option value="2s" {% if controls.logo_pulse_speed == '2s' %}selected{% endif %}>سريع (ثانيتان)</option>
                     </select>
                     <label>لون التوهج والإضاءة:</label>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                         <input type="color" name="logo_pulse_color" value="{{ controls.logo_pulse_color }}">
-                        <span style="font-size: 12px; color: #aaa;">اختر لون التوهج المناسب للشعار (مثل الذهبي أو الأحمر)</span>
+                        <span style="font-size: 12px; color: #aaa;">اختر لون التوهج</span>
                     </div>
-                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشعار الدائري ✅</button>
+                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشعار ✅</button>
                 </form>
             </div>
             <div class="collapsible-header" onclick="toggleSection('sec_auctions')"><span>🔨 إدارة وإطلاق المزادات</span><span id="icon-sec_auctions">▼</span></div>
@@ -1485,6 +1495,10 @@ def update_logo():
     color = request.form.get('logo_pulse_color')
     if color:
         site_controls['logo_pulse_color'] = color
+        
+    size = request.form.get('logo_size')
+    if size:
+        site_controls['logo_size'] = size
 
     logo_file = request.files.get('logo_file')
     if logo_file and logo_file.filename != '':
