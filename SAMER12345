@@ -884,6 +884,8 @@ admin_template = """
         .collapsible-header { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 14px 18px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-top: 15px; user-select: none; }
         .collapsible-header:hover { background: #222; color: #25d366; }
         .collapsible-content { display: none; background: #0a0a0a; border: 1px solid #222; border-top: none; padding: 15px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-bottom: 15px; }
+        .forgot-pass-btn { display: block; text-align: center; background: #25d366; color: #000; padding: 10px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: bold; margin-top: 10px; }
+        .forgot-pass-btn:hover { background: #22bf5b; }
     </style>
 </head>
 <body>
@@ -896,6 +898,10 @@ admin_template = """
                 <button type="submit">دخول</button>
             </form>
             {% if error %}<p style="color: #ef4444; text-align: center; font-size: 13px; margin-top: 10px;">❌ رمز المرور غير صحيح!</p>{% endif %}
+            
+            <a href="https://wa.me/{{ controls.admin_whatsapp }}?text={{ 'مرحباً سامر، لقد نسيت كلمة مرور لوحة التحكم الخاصة بمتجر عتيق، أرجو مساعدتي في استرجاعها.' | urlencode }}" target="_blank" class="forgot-pass-btn">
+                🔑 نسيت كلمة السر؟ (إرسال تنبيه واتساب)
+            </a>
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
