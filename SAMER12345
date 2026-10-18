@@ -127,7 +127,8 @@ site_config = {
         "form_main_title": "#ffffff",      
         "label_title": "#cccccc",          
         "upload_text": "#ffffff",          
-        "submit_btn": "#25d366"            
+        "submit_btn": "#25d366",
+        "glow_color": "#25d366"            # لون إضاءة وتوهج السلة
     }
 }
 
@@ -149,7 +150,8 @@ color_names_ar = {
     "form_main_title": "لون عنوان نموذج الإضافة",
     "label_title": "لون عناوين الحقول (Labels)",
     "upload_text": "لون نص اختيار الصور",
-    "submit_btn": "لون زر نشر المنتج"
+    "submit_btn": "لون زر نشر المنتج",
+    "glow_color": "لون إضاءة وتوهج سلة المشتريات ✨"
 }
 
 default_html_template = """
@@ -466,24 +468,29 @@ cart_template = """
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>سلة المشتريات - {{ config.title }}</title>
     <style>
-        body { background: #000; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-        .box { background: #111; border: 1px solid #333; border-radius: 12px; padding: 25px; width: 100%; max-width: 900px; box-sizing: border-box; margin-top: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-        h1 { color: #dc2626; text-align: center; font-size: 22px; margin-bottom: 20px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 14px 18px; border-radius: 8px; border: 1px solid #222; margin-bottom: 12px; }
+        body { background: {{ config.colors.bg_color }}; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .full-screen-container { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: calc(100vh - 40px); }
+        h1 { color: #dc2626; text-align: center; font-size: 24px; margin-bottom: 25px; text-shadow: 0 0 15px {{ config.colors.glow_color }}; }
+        
+        .cart-items-wrapper { width: 100%; max-width: 950px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 16px 22px; border-radius: 10px; border: 1px solid #222; box-shadow: 0 0 20px {{ config.colors.glow_color }}; transition: box-shadow 0.3s ease; }
+        .cart-item:hover { box-shadow: 0 0 30px {{ config.colors.glow_color }}; }
+        
         .cart-item-info { text-decoration: none; display: block; flex: 1; }
-        .cart-item-title { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 4px; }
+        .cart-item-title { font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px; }
         .cart-item-title:hover { color: #25d366; }
         .cart-item-price { font-size: 14px; color: #25d366; font-weight: bold; }
         .delete-btn { background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
-        .back { display: block; text-align: center; margin-top: 30px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
+        .back-area { width: 100%; max-width: 950px; margin: 30px auto 10px auto; text-align: center; }
+        .back { display: inline-block; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <div>
+    <div class="full-screen-container">
+        <div class="cart-items-wrapper">
             <h1>🛒 سلة المشتريات الخاصة بك</h1>
             {% if cart_items|length == 0 %}
-                <p style="color: #888; text-align: center; padding: 40px; font-size: 15px;">السلة فارغة حالياً.</p>
+                <p style="color: #888; text-align: center; padding: 50px; font-size: 16px;">السلة فارغة حالياً.</p>
             {% else %}
                 {% for item in cart_items %}
                     <div class="cart-item">
@@ -498,7 +505,7 @@ cart_template = """
                 {% endfor %}
             {% endif %}
         </div>
-        <div>
+        <div class="back-area">
             <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
         </div>
     </div>
