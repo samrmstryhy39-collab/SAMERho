@@ -94,7 +94,7 @@ site_controls = {
     "enable_cod_note": True,
     "enable_forgot_pass": True,
     "enable_scroll_top": True,
-    "enable_marquee": True,  # تفعيل الشريط الإعلاني
+    "enable_marquee": True,
     "marquee_text": "🔥 أهلاً بكم في متجر عتيق - كل قطعة أصلية ولها حكاية فريدة 🏛️ | توصيل سريع لجميع المحافظات 🚚",
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
@@ -393,7 +393,6 @@ default_html_template = """
         body { background-color: {{ config.colors.bg_color }}; {% if config.bg_image %}background-image: url('{{ config.bg_image }}'); background-size: cover; background-position: center; background-attachment: fixed; {% endif %} font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
         {% if config.bg_image %}body::before { content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.75); z-index: -1; }{% endif %}
         
-        /* الشريط الإعلاني المتحرك */
         .marquee-bar { width: 100%; max-width: 900px; background: rgba(217, 119, 6, 0.15); border: 1px solid #d97706; color: #fbbf24; padding: 8px 0; border-radius: 8px; margin-bottom: 20px; overflow: hidden; white-space: nowrap; box-sizing: border-box; font-size: 13px; font-weight: bold; }
         .marquee-content { display: inline-block; animation: marqueeAnim 20s linear infinite; padding-left: 100%; }
         @keyframes marqueeAnim { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
@@ -420,7 +419,6 @@ default_html_template = """
             100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 15px {{ controls.logo_pulse_color }}; }
         }
 
-        /* تعديل الشعار ليصبح دائري بالكامل مع تأثير النبض */
         .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 50%; padding: 5px; width: 130px; height: 130px; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: customPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;{% endif %} }
         .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
@@ -451,7 +449,6 @@ default_html_template = """
         .products-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
         @media (min-width: 768px) { .products-grid { grid-template-columns: repeat(4, 1fr); } }
         
-        /* تأثير الظهور التدريجي للقطع (Fade-in Animation) */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
@@ -507,7 +504,6 @@ default_html_template = """
     <button id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()" title="العودة للأعلى">▲</button>
     {% endif %}
 
-    <!-- الشريط الإعلاني المتحرك (يظهر إذا كان مفعل) -->
     {% if controls.enable_marquee and controls.marquee_text %}
     <div class="marquee-bar">
         <div class="marquee-content">{{ controls.marquee_text }}</div>
@@ -1001,7 +997,6 @@ admin_template = """
                 {% endif %}
             </div>
 
-            <!-- إعدادات الشريط الإعلاني المتحرك -->
             <div class="collapsible-header" onclick="toggleSection('sec_marquee')"><span>📢 إعدادات الشريط الإعلاني المتحرك</span><span id="icon-sec_marquee">▼</span></div>
             <div id="sec_marquee" class="collapsible-content">
                 <form action="/update-marquee" method="POST">
@@ -1559,4 +1554,20 @@ def admin():
     if request.method == 'POST':
         if is_locked:
             return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=False, error=True, is_locked=True, remaining_seconds=remaining_seconds, raw_template=current_html_template, color_names_ar=color_names_ar)
-        if request.form.get('password') == ADMIN_
+        if request.form.get('password') == ADMIN_PASSWORD:
+            authorized = True
+            login_attempts = 0
+        else:
+            error = True
+            login_attempts += 1
+            if login_attempts >= 5:
+                lockout_until = current_time + 900
+                is_locked = True
+                remaining_seconds = 900
+                login_attempts = 0
+    remaining_attempts = max(0, 5 - login_attempts)
+    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
