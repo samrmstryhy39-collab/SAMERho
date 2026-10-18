@@ -226,6 +226,169 @@ color_names_ar = {
     "filter_btn_text": "لون أيقونة ونصوص زر الفلترة"
 }
 
+product_detail_template = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.title }} - {{ config.title }}</title>
+    <style>
+        body { background-color: {{ config.colors.bg_color }}; color: #ffffff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .detail-container { background: #111; border: 1px solid #222; border-radius: 14px; padding: 25px; width: 100%; max-width: 600px; box-shadow: 0 4px 25px rgba(0,0,0,0.9); margin-top: 20px; text-align: center; }
+        .gallery { display: flex; flex-direction: row; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
+        .gallery img { width: 100%; max-height: 500px; object-fit: contain; border-radius: 8px; background: #000; border: 1px solid #333; flex: 0 0 100%; }
+        .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
+        .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
+        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+        .buy-toggle-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
+        .share-btn { display: block; text-align: center; background: #2563eb; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
+        .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
+        .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
+        .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+        .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
+        .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; margin-bottom: 10px; }
+        .toast-msg { position: fixed; bottom: 30px; background: #25d366; color: #000; padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; gap: 8px; }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
+    <div class="detail-container">
+        <h1 class="product-title">{{ product.title }}</h1>
+        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
+        {% if product.description %}
+        <div class="product-desc">
+            <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
+            {{ product.description }}
+        </div>
+        {% endif %}
+        <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
+        
+        <button class="share-btn" onclick="shareCurrentProduct()">مشاركة هذه القطعة 🔗</button>
+
+        {% if controls.enable_contact_btn and not product.is_sold %}
+            <button class="buy-toggle-btn" onclick="toggleCheckout()">{{ config.texts.contact_word }} 🛒</button>
+            <div id="checkoutForm" class="checkout-form {% if error %}active{% endif %}" style="display: {% if error %}block{% else %}none{% endif %};">
+                <h3 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">أدخل بيانات الشخصية لإتمام الشراء:</h3>
+                {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+                <form action="/buy-product/{{ product.id }}" method="POST">
+                    <label style="font-size: 12px; color: #ccc;">الاسم الثلاثي:</label>
+                    <input type="text" name="full_name" placeholder="الاسم الثلاثي" required>
+                    <label style="font-size: 12px; color: #ccc;">المحافظة:</label>
+                    <input type="text" name="province" placeholder="المحافظة (مثال: عمان)" required>
+                    <label style="font-size: 12px; color: #ccc;">الشارع:</label>
+                    <input type="text" name="street" placeholder="اسم الشارع أو المنطقة" required>
+                    <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label>
+                    <input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                    {% if controls.enable_cod_note and controls.cod_note_text %}
+                        <div style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; text-align: right; font-weight: bold;">
+                            {{ controls.cod_note_text }}
+                        </div>
+                    {% endif %}
+                    <button type="submit" class="checkout-submit">إرسال الطلب عبر الواتساب 🚀</button>
+                </form>
+            </div>
+        {% endif %}
+
+        {% if controls.enable_cart and not product.is_sold %}
+            <button type="button" class="buy-toggle-btn" style="background: {{ config.colors.cart_btn }}; margin-bottom: 15px;" onclick="addToCart({{ product.id }})">أضف إلى السلة 🛒</button>
+        {% elif product.is_sold %}
+            <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
+        {% endif %}
+        {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
+    </div>
+
+    <script>
+        function shareCurrentProduct() {
+            const productUrl = window.location.href;
+            const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 {{ product.title }}\n💰 السعر: {{ product.price }}\n🔗 الرابط: ${productUrl}`;
+            if (navigator.share) {
+                navigator.share({ title: '{{ product.title }}', text: shareText, url: productUrl }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(shareText);
+                const toast = document.getElementById('toast');
+                toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
+                toast.style.display = 'flex';
+                setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            }
+        }
+        function toggleCheckout() {
+            const form = document.getElementById('checkoutForm');
+            if (form.style.display === 'block') { form.style.display = 'none'; }
+            else { form.style.display = 'block'; form.scrollIntoView({ behavior: 'smooth' }); }
+        }
+        function addToCart(productId) {
+            fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
+            .then(response => response.json())
+            .then(data => {
+                const toast = document.getElementById('toast');
+                if(data.success) {
+                    toast.innerText = "✅ تم الإضافة إلى السلة";
+                    toast.style.background = "#25d366";
+                    toast.style.color = "#000";
+                } else {
+                    toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة";
+                    toast.style.background = "#dc2626";
+                    toast.style.color = "#fff";
+                }
+                toast.style.display = 'flex';
+                setTimeout(() => { toast.style.display = 'none'; }, 3000);
+            });
+        }
+    </script>
+</body>
+</html>
+"""
+
+cart_template = """
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سلة المشتريات - {{ config.title }}</title>
+    <style>
+        body { background: {{ config.colors.bg_color }}; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        .full-screen-container { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: calc(100vh - 40px); }
+        h1 { color: #dc2626; text-align: center; font-size: 24px; margin-bottom: 25px; text-shadow: 0 0 15px {{ config.colors.glow_color }}; }
+        .cart-items-wrapper { width: 100%; max-width: 950px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
+        .cart-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 14px 18px; border-radius: 10px; border: 1px solid #222; box-shadow: 0 0 20px {{ config.colors.glow_color }}; gap: 12px; }
+        .cart-item-left { display: flex; align-items: center; gap: 15px; flex: 1; text-decoration: none; }
+        .cart-item-img { width: 65px; height: 65px; object-fit: cover; border-radius: 8px; border: 1px solid #333; background: #000; flex-shrink: 0; }
+        .cart-item-info { display: flex; flex-direction: column; gap: 4px; }
+        .cart-item-title { font-size: 16px; font-weight: bold; color: #fff; }
+        .cart-item-price { font-size: 14px; color: #25d366; font-weight: bold; }
+        .delete-btn { background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; flex-shrink: 0; }
+        .back-area { width: 100%; max-width: 950px; margin: 30px auto 10px auto; text-align: center; }
+        .back { display: inline-block; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
+    </style>
+</head>
+<body>
+    <div class="full-screen-container">
+        <div class="cart-items-wrapper">
+            <h1>🛒 سلة المشتريات الخاصة بك</h1>
+            {% if cart_items|length == 0 %}
+                <p style="color: #888; text-align: center; padding: 50px; font-size: 16px;">السلة فارغة حالياً.</p>
+            {% else %}
+                {% for item in cart_items %}
+                    <div class="cart-item">
+                        <a href="/product/{{ item.id }}" class="cart-item-left">
+                            {% if item.image %}<img src="{{ item.image }}" alt="صورة المنتج" class="cart-item-img">{% endif %}
+                            <div class="cart-item-info">
+                                <div class="cart-item-title">{{ item.title }}</div>
+                                <div class="cart-item-price">{{ item.price }}</div>
+                            </div>
+                        </a>
+                        <form action="/remove-from-cart/{{ item.cart_id }}" method="POST" style="margin:0;">
+                            <button type="submit" class="delete-btn">حذف</button>
+                        </form>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <div class="back-area"><a href="/" class="back">← العودة إلى المتجر الرئيسي</a></div>
+    </div>
+</body>
+</html>
+"""
 default_html_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -252,10 +415,8 @@ default_html_template = """
 
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
-        
         .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 16px; padding: 5px; box-shadow: 0 0 15px rgba(239, 68, 68, 0.35); width: 130px; height: 130px; overflow: hidden; box-sizing: border-box; }
         .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 12px; display: block; }
-
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         
         .search-filter-bar { width: 100%; max-width: 900px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; box-sizing: border-box; }
@@ -484,7 +645,6 @@ default_html_template = """
             document.getElementById("filterMenu").classList.remove("filter-show");
             filterAndSortProducts();
         }
-
         window.addEventListener('click', function(e) {
             if (!e.target.closest('.filter-dropdown-container')) {
                 var menu = document.getElementById("filterMenu");
@@ -493,7 +653,6 @@ default_html_template = """
                 }
             }
         });
-
         function addToCart(productId) {
             fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
             .then(response => response.json())
@@ -509,12 +668,9 @@ default_html_template = """
                     toast.style.color = "#fff";
                 }
                 toast.style.display = 'flex';
-                setTimeout(() => {
-                    toast.style.display = 'none';
-                }, 3000);
+                setTimeout(() => { toast.style.display = 'none'; }, 3000);
             });
         }
-
         function toggleDropdown() {
             document.getElementById("settingsDropdown").classList.toggle("show");
         }
@@ -523,9 +679,7 @@ default_html_template = """
                 var dropdowns = document.getElementsByClassName("dropdown-content");
                 for (var i = 0; i < dropdowns.length; i++) {
                     var openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
+                    if (openDropdown.classList.contains('show')) { openDropdown.classList.remove('show'); }
                 }
             }
         }
@@ -577,226 +731,25 @@ default_html_template = """
             if (pagination) {
                 pagination.style.display = (filter !== '' || sortVal !== 'newest') ? 'none' : 'flex';
             }
-
             cards.forEach(card => {
                 const title = card.getAttribute('data-title').toLowerCase();
                 card.style.display = title.includes(filter) ? "" : "none";
             });
-
             cards.sort((a, b) => {
                 const priceA = parseFloat(a.getAttribute('data-price')) || 0;
                 const priceB = parseFloat(b.getAttribute('data-price')) || 0;
                 const idA = parseInt(a.getAttribute('data-id')) || 0;
                 const idB = parseInt(b.getAttribute('data-id')) || 0;
-
-                if (sortVal === 'price-low') {
-                    return priceA - priceB;
-                } else if (sortVal === 'price-high') {
-                    return priceB - priceA;
-                } else {
-                    return idB - idA; // الأحدث
-                }
+                if (sortVal === 'price-low') { return priceA - priceB; }
+                else if (sortVal === 'price-high') { return priceB - priceA; }
+                else { return idB - idA; }
             });
-
             cards.forEach(card => grid.appendChild(card));
         }
     </script>
 </body>
 </html>
 """
-
-product_detail_template = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ product.title }} - {{ config.title }}</title>
-    <style>
-        body { background-color: {{ config.colors.bg_color }}; color: #ffffff; font-family: Tahoma, sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .detail-container { background: #111; border: 1px solid #222; border-radius: 14px; padding: 25px; width: 100%; max-width: 600px; box-shadow: 0 4px 25px rgba(0,0,0,0.9); margin-top: 20px; text-align: center; }
-        .gallery { display: flex; flex-direction: row; overflow-x: auto; gap: 10px; margin-bottom: 20px; }
-        .gallery img { width: 100%; max-height: 500px; object-fit: contain; border-radius: 8px; background: #000; border: 1px solid #333; flex: 0 0 100%; }
-        .product-title { font-size: 22px; font-weight: bold; color: {{ config.colors.product_title }}; margin-bottom: 10px; }
-        .product-price { font-size: 18px; color: {{ config.colors.product_price }}; font-weight: bold; margin-bottom: 15px; }
-        .product-desc { background: #000; border: 1px solid #222; border-radius: 8px; padding: 15px; margin-bottom: 20px; text-align: right; color: #ddd; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
-        .buy-toggle-btn { display: block; text-align: center; background: {{ config.colors.whatsapp_btn }}; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
-        .share-btn { display: block; text-align: center; background: #2563eb; color: white; padding: 12px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; margin-bottom: 10px; border: none; width: 100%; cursor: pointer; }
-        .checkout-form { display: none; background: #000; border: 1px solid #333; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: right; }
-        .checkout-form input { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #333; background: #111; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
-        .checkout-submit { background: #25d366; color: #fff; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .back-link { display: inline-block; color: #25d366; text-decoration: none; font-size: 14px; font-weight: bold; margin-top: 10px; }
-        .error-msg { background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 8px; border-radius: 6px; text-align: center; font-size: 12px; margin-bottom: 10px; }
-        
-        .toast-msg { position: fixed; bottom: 30px; background: #25d366; color: #000; padding: 12px 25px; border-radius: 10px; font-weight: bold; font-size: 14px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 1000; display: none; align-items: center; gap: 8px; }
-    </style>
-</head>
-<body>
-    <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
-    <div class="detail-container">
-        <h1 class="product-title">{{ product.title }}</h1>
-        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
-        {% if product.description %}
-        <div class="product-desc">
-            <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
-            {{ product.description }}
-        </div>
-        {% endif %}
-        <div class="gallery">{% for img in product.images %}<img src="{{ img }}" alt="صورة المنتج">{% endfor %}</div>
-        
-        <button class="share-btn" onclick="shareCurrentProduct()">مشاركة هذه القطعة 🔗</button>
-
-        {% if controls.enable_contact_btn and not product.is_sold %}
-            <button class="buy-toggle-btn" onclick="toggleCheckout()">{{ config.texts.contact_word }} 🛒</button>
-            <div id="checkoutForm" class="checkout-form {% if error %}active{% endif %}" style="display: {% if error %}block{% else %}none{% endif %};">
-                <h3 style="color: #fbbf24; font-size: 14px; margin-bottom: 10px;">أدخل بيانات الشخصية لإتمام الشراء:</h3>
-                {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
-                <form action="/buy-product/{{ product.id }}" method="POST">
-                    <label style="font-size: 12px; color: #ccc;">الاسم الثلاثي:</label>
-                    <input type="text" name="full_name" placeholder="الاسم الثلاثي" required>
-                    
-                    <label style="font-size: 12px; color: #ccc;">المحافظة:</label>
-                    <input type="text" name="province" placeholder="المحافظة (مثال: عمان)" required>
-                    
-                    <label style="font-size: 12px; color: #ccc;">الشارع:</label>
-                    <input type="text" name="street" placeholder="اسم الشارع أو المنطقة" required>
-                    
-                    <label style="font-size: 12px; color: #ccc;">رقم الهاتف للتواصل:</label>
-                    <input type="text" name="phone" placeholder="رقم الهاتف (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
-                    
-                    {% if controls.enable_cod_note and controls.cod_note_text %}
-                        <div style="font-size: 12px; color: #fbbf24; margin-bottom: 12px; text-align: right; font-weight: bold;">
-                            {{ controls.cod_note_text }}
-                        </div>
-                    {% endif %}
-                    
-                    <button type="submit" class="checkout-submit">إرسال الطلب عبر الواتساب 🚀</button>
-                </form>
-            </div>
-        {% endif %}
-
-        {% if controls.enable_cart and not product.is_sold %}
-            <button type="button" class="buy-toggle-btn" style="background: {{ config.colors.cart_btn }}; margin-bottom: 15px;" onclick="addToCart({{ product.id }})">أضف إلى السلة 🛒</button>
-        {% elif product.is_sold %}
-            <p style="color: #dc2626; font-weight: bold; margin-bottom: 15px;">عذراً، هذا المنتج تم بيعه.</p>
-        {% endif %}
-        {% if vis.back_home %}<a href="/" class="back-link">{{ config.texts.back_home }}</a>{% endif %}
-    </div>
-
-    <script>
-        function shareCurrentProduct() {
-            const productUrl = window.location.href;
-            const shareText = `شاهد هذه القطعة المميزة من متجر عتيق:\n📌 {{ product.title }}\n💰 السعر: {{ product.price }}\n🔗 الرابط: ${productUrl}`;
-            
-            if (navigator.share) {
-                navigator.share({
-                    title: '{{ product.title }}',
-                    text: shareText,
-                    url: productUrl
-                }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(shareText);
-                const toast = document.getElementById('toast');
-                toast.innerText = "✅ تم نسخ تفاصيل ورابط القطعة للمشاركة!";
-                toast.style.display = 'flex';
-                setTimeout(() => { toast.style.display = 'none'; }, 3000);
-            }
-        }
-
-        function toggleCheckout() {
-            const form = document.getElementById('checkoutForm');
-            if (form.style.display === 'block') {
-                form.style.display = 'none';
-            } else {
-                form.style.display = 'block';
-                form.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
-        function addToCart(productId) {
-            fetch('/add-to-cart-ajax/' + productId, { method: 'POST', credentials: 'same-origin' })
-            .then(response => response.json())
-            .then(data => {
-                const toast = document.getElementById('toast');
-                if(data.success) {
-                    toast.innerText = "✅ تم الإضافة إلى السلة";
-                    toast.style.background = "#25d366";
-                    toast.style.color = "#000";
-                } else {
-                    toast.innerText = "⚠️ هذا المنتج مضاف مسبقاً في السلة";
-                    toast.style.background = "#dc2626";
-                    toast.style.color = "#fff";
-                }
-                toast.style.display = 'flex';
-                setTimeout(() => {
-                    toast.style.display = 'none';
-                }, 3000);
-            });
-        }
-    </script>
-</body>
-</html>
-"""
-
-cart_template = """
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>سلة المشتريات - {{ config.title }}</title>
-    <style>
-        body { background: {{ config.colors.bg_color }}; color: #fff; font-family: Tahoma, sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-        .full-screen-container { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; min-height: calc(100vh - 40px); }
-        h1 { color: #dc2626; text-align: center; font-size: 24px; margin-bottom: 25px; text-shadow: 0 0 15px {{ config.colors.glow_color }}; }
-        
-        .cart-items-wrapper { width: 100%; max-width: 950px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px; }
-        .cart-item { display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; padding: 14px 18px; border-radius: 10px; border: 1px solid #222; box-shadow: 0 0 20px {{ config.colors.glow_color }}; transition: box-shadow 0.3s ease; gap: 12px; }
-        .cart-item:hover { box-shadow: 0 0 30px {{ config.colors.glow_color }}; }
-        
-        .cart-item-left { display: flex; align-items: center; gap: 15px; flex: 1; text-decoration: none; }
-        .cart-item-img { width: 65px; height: 65px; object-fit: cover; border-radius: 8px; border: 1px solid #333; background: #000; flex-shrink: 0; }
-        
-        .cart-item-info { display: flex; flex-direction: column; gap: 4px; }
-        .cart-item-title { font-size: 16px; font-weight: bold; color: #fff; }
-        .cart-item-title:hover { color: #25d366; }
-        .cart-item-price { font-size: 14px; color: #25d366; font-weight: bold; }
-        
-        .delete-btn { background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; flex-shrink: 0; }
-        .back-area { width: 100%; max-width: 950px; margin: 30px auto 10px auto; text-align: center; }
-        .back { display: inline-block; color: #25d366; text-decoration: none; font-weight: bold; font-size: 15px; }
-    </style>
-</head>
-<body>
-    <div class="full-screen-container">
-        <div class="cart-items-wrapper">
-            <h1>🛒 سلة المشتريات الخاصة بك</h1>
-            {% if cart_items|length == 0 %}
-                <p style="color: #888; text-align: center; padding: 50px; font-size: 16px;">السلة فارغة حالياً.</p>
-            {% else %}
-                {% for item in cart_items %}
-                    <div class="cart-item">
-                        <a href="/product/{{ item.id }}" class="cart-item-left">
-                            {% if item.image %}
-                                <img src="{{ item.image }}" alt="صورة المنتج" class="cart-item-img">
-                            {% endif %}
-                            <div class="cart-item-info">
-                                <div class="cart-item-title">{{ item.title }}</div>
-                                <div class="cart-item-price">{{ item.price }}</div>
-                            </div>
-                        </a>
-                        <form action="/remove-from-cart/{{ item.cart_id }}" method="POST" style="margin:0;">
-                            <button type="submit" class="delete-btn">حذف</button>
-                        </form>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        </div>
-        <div class="back-area">
-            <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
-        </div>
-    </div>
-</body>
-</html>
-"""
-
 auction_detail_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -820,44 +773,31 @@ auction_detail_template = """
     <div class="box">
         <h1>🔨 مزاد على: {{ auction.title }}</h1>
         {% if auction.images and auction.images|length > 0 %}
-        <div class="auction-gallery">
-            {% for img in auction.images %}
-                <img src="{{ img }}" alt="صورة المزاد">
-            {% endfor %}
-        </div>
+        <div class="auction-gallery">{% for img in auction.images %}<img src="{{ img }}" alt="صورة المزاد">{% endfor %}</div>
         {% endif %}
         <p style="color: #bbb; font-size: 13px; margin-bottom: 15px; text-align: right;">{{ auction.description }}</p>
-        
         <div class="info">
             <span>السعر الحالي:</span>
             {% if auction.bids and auction.bids|length > 0 %}
                 {% set sorted_bids = auction.bids|sort(attribute='amount', reverse=True) %}
                 <select style="background: #000; color: #25d366; border: 1px solid #333; padding: 6px 10px; border-radius: 6px; font-weight: bold; outline: none; font-size: 14px;">
                     <option value="{{ sorted_bids[0].amount }}">{{ sorted_bids[0].amount }} (بواسطة: {{ sorted_bids[0].name }})</option>
-                    {% for b in sorted_bids[1:] %}
-                        <option value="{{ b.amount }}">{{ b.amount }} (بواسطة: {{ b.name }})</option>
-                    {% endfor %}
+                    {% for b in sorted_bids[1:] %}<option value="{{ b.amount }}">{{ b.amount }} (بواسطة: {{ b.name }})</option>{% endfor %}
                 </select>
             {% else %}
                 <b style="color: #25d366;">{{ auction.current_price }}</b>
             {% endif %}
         </div>
-
         <div class="info"><span>الحد الأدنى للمزايدة:</span><b>{{ auction.min_bid }}</b></div>
         {% if auction.max_price %}<div class="info"><span>الحد الأقصى (الشراء الفوري):</span><b style="color: #ff5252;">{{ auction.max_price }}</b></div>{% endif %}
-        
         {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
-
         <form action="/bid/{{ auction.id }}" method="POST" style="margin-top: 20px;">
             {% if vis.bid_name_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_name_label }}</label>{% endif %}
             <input type="text" name="bidder_name" placeholder="أدخل اسمك" required>
-            
             {% if vis.bid_phone_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_phone_label }}</label>{% endif %}
             <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
-            
             {% if vis.bid_amount_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_amount_label }}</label>{% endif %}
             <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
-            
             <button type="submit">{{ config.texts.bid_submit_btn }}</button>
         </form>
         <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
@@ -883,14 +823,10 @@ reviews_page_template = """
         .review-card span { color: #25d366; font-size: 11px; font-weight: bold; }
         .add-review-form { margin-top: 25px; border-top: 1px solid #222; padding-top: 20px; }
         input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; font-size: 13px; box-sizing: border-box; outline: none; }
-        
         .rating-select { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 5px; margin-bottom: 12px; }
         .rating-select input { display: none; }
         .rating-select label { font-size: 24px; color: #444; cursor: pointer; transition: color 0.2s; }
-        .rating-select input:checked ~ label,
-        .rating-select label:hover,
-        .rating-select label:hover ~ label { color: #fbbf24; }
-
+        .rating-select input:checked ~ label, .rating-select label:hover, .rating-select label:hover ~ label { color: #fbbf24; }
         button { width: 100%; padding: 12px; border-radius: 8px; background: #25d366; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
         .back { display: block; text-align: center; margin-top: 25px; color: #25d366; text-decoration: none; font-weight: bold; font-size: 14px; }
     </style>
@@ -903,19 +839,15 @@ reviews_page_template = """
             <div class="review-card">
                 <div class="review-header">
                     <span>- {{ r.name }}</span>
-                    <div class="review-stars">
-                        {% for i in range(r.rating) %}⭐{% endfor %}
-                    </div>
+                    <div class="review-stars">{% for i in range(r.rating) %}⭐{% endfor %}</div>
                 </div>
                 <p>"{{ r.comment }}"</p>
             </div>
         {% endfor %}
-        
         <div class="add-review-form">
             <h3 style="color: #fff; font-size: 15px; margin-bottom: 12px; text-align: right;">أضف رأيك وتجربتك معنا:</h3>
             <form action="/add-review" method="POST">
                 <input type="text" name="reviewer_name" placeholder="اسمك الكريم" required>
-                
                 <label style="font-size: 12px; color: #ccc; margin-bottom: 5px; display: block; text-align: right;">التقييم بالنجوم:</label>
                 <div class="rating-select">
                     <input type="radio" id="star5" name="rating" value="5" checked><label for="star5">★</label>
@@ -924,7 +856,6 @@ reviews_page_template = """
                     <input type="radio" id="star2" name="rating" value="2"><label for="star2">★</label>
                     <input type="radio" id="star1" name="rating" value="1"><label for="star1">★</label>
                 </div>
-
                 <textarea name="reviewer_comment" rows="3" placeholder="اكتب رأيك هنا..." required></textarea>
                 <button type="submit">نشر الرأي</button>
             </form>
@@ -956,9 +887,7 @@ copyright_template = """
             <h1>حقوق النشر والشروط</h1>
             <p>{{ text }}</p>
         </div>
-        <div>
-            <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
-        </div>
+        <div><a href="/" class="back">← العودة إلى المتجر الرئيسي</a></div>
     </div>
 </body>
 </html>
@@ -992,7 +921,6 @@ admin_template = """
         .checkbox-label { display: flex; align-items: center; gap: 10px; background: #000; padding: 10px; border-radius: 8px; border: 1px solid #222; cursor: pointer; margin-bottom: 10px; font-size: 14px; color: #fff; font-weight: normal; }
         .checkbox-label input { width: 18px; height: 18px; cursor: pointer; }
         .note-card { background: #000; border: 1px solid #333; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 13px; }
-        
         .collapsible-header { background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 14px 18px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; margin-top: 15px; user-select: none; }
         .collapsible-header:hover { background: #222; color: #25d366; }
         .collapsible-content { display: none; background: #0a0a0a; border: 1px solid #222; border-top: none; padding: 15px; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; margin-bottom: 15px; }
@@ -1017,59 +945,36 @@ admin_template = """
                     <button type="submit">دخول</button>
                 </form>
                 {% if error %}<p style="color: #ef4444; text-align: center; font-size: 13px; margin-top: 10px;">❌ رمز المرور غير صحيح! (المحاولات المتبقية: {{ remaining_attempts }})</p>{% endif %}
-                
                 {% if controls.enable_forgot_pass %}
-                <a href="https://wa.me/{{ controls.admin_whatsapp }}?text={{ 'مرحباً سامر، لقد نسيت كلمة مرور لوحة التحكم الخاصة بمتجر عتيق، أرجو مساعدتي في استرجاعها.' | urlencode }}" target="_blank" class="forgot-pass-btn">
-                    🔑 نسيت كلمة السر؟ (إرسال تنبيه واتساب)
-                </a>
+                <a href="https://wa.me/{{ controls.admin_whatsapp }}?text={{ 'مرحباً سامر، لقد نسيت كلمة مرور لوحة التحكم الخاصة بمتجر عتيق، أرجو مساعدتي في استرجاعها.' | urlencode }}" target="_blank" class="forgot-pass-btn">🔑 نسيت كلمة السر؟ (إرسال تنبيه واتساب)</a>
                 {% endif %}
             {% endif %}
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
-            
-            <div class="collapsible-header" onclick="toggleSection('sec_password')">
-                <span>🔑 تغيير رمز مرور لوحة التحكم</span>
-                <span id="icon-sec_password">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_password')"><span>🔑 تغيير رمز مرور لوحة التحكم</span><span id="icon-sec_password">▼</span></div>
             <div id="sec_password" class="collapsible-content">
                 <form action="/update-password" method="POST">
-                    <label>رمز المرور الحالي:</label>
-                    <input type="password" name="current_password" placeholder="أدخل الرمز الحالي" required>
-                    <label>رمز المرور الجديد:</label>
-                    <input type="password" name="new_password" placeholder="أدخل الرمز الجديد" required>
+                    <label>رمز المرور الحالي:</label><input type="password" name="current_password" placeholder="أدخل الرمز الحالي" required>
+                    <label>رمز المرور الجديد:</label><input type="password" name="new_password" placeholder="أدخل الرمز الجديد" required>
                     <button type="submit" style="background: #dc2626;">تحديث رمز المرور</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_wa')">
-                <span>📱 رقم الواتساب الخاص بك (لتلقي الطلبات والمزادات)</span>
-                <span id="icon-sec_wa">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_wa')"><span>📱 رقم الواتساب الخاص بك (لتلقي الطلبات والمزادات)</span><span id="icon-sec_wa">▼</span></div>
             <div id="sec_wa" class="collapsible-content">
                 <form action="/update-admin-whatsapp" method="POST">
-                    <label>رقم الواتساب (مع رمز الدولة بدون +):</label>
-                    <input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000" required>
+                    <label>رقم الواتساب (مع رمز الدولة بدون +):</label><input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000" required>
                     <button type="submit">حفظ رقم الواتساب</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_cod')">
-                <span>💵 إعدادات جملة الدفع عند الاستلام</span>
-                <span id="icon-sec_cod">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_cod')"><span>💵 إعدادات جملة الدفع عند الاستلام</span><span id="icon-sec_cod">▼</span></div>
             <div id="sec_cod" class="collapsible-content">
                 <form action="/update-cod-settings" method="POST">
                     <label class="checkbox-label"><input type="checkbox" name="enable_cod_note" {% if controls.enable_cod_note %}checked{% endif %}> تفعيل ظهور جملة الدفع عند الاستلام تحت رقم الهاتف</label>
-                    <label>نص العبارة التوضيحية:</label>
-                    <input type="text" name="cod_note_text" value="{{ controls.cod_note_text }}" placeholder="مثال: الدفع عند الاستلام 💵" required>
+                    <label>نص العبارة التوضيحية:</label><input type="text" name="cod_note_text" value="{{ controls.cod_note_text }}" placeholder="مثال: الدفع عند الاستلام 💵" required>
                     <button type="submit" style="margin-top: 10px;">حفظ إعدادات العبارة</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec1')">
-                <span>⚙️ إدارة الخصائص والميزات العامة</span>
-                <span id="icon-sec1">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec1')"><span>⚙️ إدارة الخصائص والميزات العامة</span><span id="icon-sec1">▼</span></div>
             <div id="sec1" class="collapsible-content">
                 <form action="/update-controls" method="POST">
                     <label class="checkbox-label"><input type="checkbox" name="enable_cart" {% if controls.enable_cart %}checked{% endif %}> تفعيل سلة المشتريات وزر "أضف إلى السلة"</label>
@@ -1084,11 +989,7 @@ admin_template = """
                     <button type="submit" style="margin-top: 10px;">حفظ الخصائص</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec2')">
-                <span>📝 إدارة النصوص والظهور</span>
-                <span id="icon-sec2">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec2')"><span>📝 إدارة النصوص والظهور</span><span id="icon-sec2">▼</span></div>
             <div id="sec2" class="collapsible-content">
                 <form action="/update-texts" method="POST">
                     {% for key, val in config.texts.items() %}
@@ -1102,11 +1003,7 @@ admin_template = """
                     <button type="submit" style="margin-top: 15px;">حفظ النصوص</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec3')">
-                <span>🎨 تعديل الألوان والتصميم وخلفية الموقع</span>
-                <span id="icon-sec3">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec3')"><span>🎨 تعديل الألوان والتصميم وخلفية الموقع</span><span id="icon-sec3">▼</span></div>
             <div id="sec3" class="collapsible-content">
                 <form action="/update-config" method="POST" enctype="multipart/form-data">
                     <label>اسم الموقع:</label><input type="text" name="title" value="{{ config.title }}" required>
@@ -1121,27 +1018,16 @@ admin_template = """
                     <button type="submit" style="margin-top: 15px;">حفظ التصميم</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_auctions')">
-                <span>🔨 إدارة وإطلاق المزادات</span>
-                <span id="icon-sec_auctions">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_auctions')"><span>🔨 إدارة وإطلاق المزادات</span><span id="icon-sec_auctions">▼</span></div>
             <div id="sec_auctions" class="collapsible-content">
                 <form action="/admin-add-auction" method="POST" enctype="multipart/form-data">
-                    <label>عنوان المزاد (اسم القطعة):</label>
-                    <input type="text" name="title" placeholder="مثال: ساعة فاخرة نادرة" required>
-                    <label>وصف المزاد أو تفاصيله:</label>
-                    <textarea name="description" rows="3" placeholder="تفاصيل وحالة القطعة..."></textarea>
-                    <label>السعر الابتدائي:</label>
-                    <input type="text" name="current_price" placeholder="مثال: 50 دينار" required>
-                    <label>الحد الأدنى للزيادة:</label>
-                    <input type="text" name="min_bid" placeholder="مثال: 5 دينار" required>
-                    <label>الحد الأقصى للشراء الفوري (اختياري):</label>
-                    <input type="text" name="max_price" placeholder="مثال: 150 دينار">
-                    <label>مدة المزاد بالساعات:</label>
-                    <input type="number" name="duration_hours" value="48" required>
-                    <label>صور القطعة للمزاد 📸:</label>
-                    <input type="file" name="auction_images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
+                    <label>عنوان المزاد (اسم القطعة):</label><input type="text" name="title" placeholder="مثال: ساعة فاخرة نادرة" required>
+                    <label>وصف المزاد أو تفاصيله:</label><textarea name="description" rows="3" placeholder="تفاصيل وحالة القطعة..."></textarea>
+                    <label>السعر الابتدائي:</label><input type="text" name="current_price" placeholder="مثال: 50 دينار" required>
+                    <label>الحد الأدنى للزيادة:</label><input type="text" name="min_bid" placeholder="مثال: 5 دينار" required>
+                    <label>الحد الأقصى للشراء الفوري (اختياري):</label><input type="text" name="max_price" placeholder="مثال: 150 دينار">
+                    <label>مدة المزاد بالساعات:</label><input type="number" name="duration_hours" value="48" required>
+                    <label>صور القطعة للمزاد 📸:</label><input type="file" name="auction_images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
                     <button type="submit" style="background: #d97706; margin-top: 10px;">إطلاق المزاد 🚀</button>
                 </form>
                 <div style="margin-top: 15px;">
@@ -1153,29 +1039,19 @@ admin_template = """
                                 <span><b>{{ a.title }}</b> (السعر الحالي: {{ a.current_price }})</span>
                                 <form action="/delete-auction/{{ a.id }}" method="POST" style="margin:0;"><button type="submit" class="delete-btn">حذف</button></form>
                             </div>
-                            {% if a.bids and a.bids|length > 0 %}
-                                <span style="font-size: 11px; color: #25d366;">إجمالي المزايدات: {{ a.bids|length }} مزايدة</span>
-                            {% endif %}
+                            {% if a.bids and a.bids|length > 0 %}<span style="font-size: 11px; color: #25d366;">إجمالي المزايدات: {{ a.bids|length }} مزايدة</span>{% endif %}
                         </div>
                     {% endfor %}
                 </div>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_code')">
-                <span>💻 محرر الكود الداخلي</span>
-                <span id="icon-sec_code">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_code')"><span>💻 محرر الكود الداخلي</span><span id="icon-sec_code">▼</span></div>
             <div id="sec_code" class="collapsible-content">
                 <form action="/update-code" method="POST">
                     <textarea name="custom_html" rows="10" style="font-family: monospace; font-size: 11px; direction: ltr; text-align: left;" required>{{ raw_template }}</textarea>
                     <button type="submit">حفظ وتحديث كود الواجهة</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_reviews')">
-                <span>⭐ إدارة وحذف آراء العملاء</span>
-                <span id="icon-sec_reviews">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_reviews')"><span>⭐ إدارة وحذف آراء العملاء</span><span id="icon-sec_reviews">▼</span></div>
             <div id="sec_reviews" class="collapsible-content">
                 {% if reviews|length == 0 %}<p style="color: #888; text-align: center; padding: 10px; font-size: 12px;">لا توجد آراء مسجلة حالياً.</p>{% endif %}
                 {% for r in reviews %}
@@ -1185,11 +1061,7 @@ admin_template = """
                     </div>
                 {% endfor %}
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_notes')">
-                <span>💡 مفكرة الأفكار والملاحظات</span>
-                <span id="icon-sec_notes">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_notes')"><span>💡 مفكرة الأفكار والملاحظات</span><span id="icon-sec_notes">▼</span></div>
             <div id="sec_notes" class="collapsible-content">
                 <form action="/add-note" method="POST" enctype="multipart/form-data">
                     <label>عنوان الفكرة أو الملاحظة:</label><input type="text" name="note_title" required>
@@ -1209,20 +1081,14 @@ admin_template = """
                     {% endfor %}
                 </div>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_logo')">
-                <span>🖼️ إدارة صورة شعار الموقع</span>
-                <span id="icon-sec_logo">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع</span><span id="icon-sec_logo">▼</span></div>
             <div id="sec_logo" class="collapsible-content">
                 <form action="/update-logo" method="POST" enctype="multipart/form-data">
                     <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار في الموقع</label>
-                    <label>اختر صورة الشعار:</label>
-                    <input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
+                    <label>اختر صورة الشعار:</label><input type="file" name="logo_file" accept="image/*" style="color: #fff; margin-bottom: 10px;">
                     <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ صورة الشعار ✅</button>
                 </form>
             </div>
-
             <div class="section-box">
                 <h3>➕ إضافة منتج جديد</h3>
                 <form action="/admin-add-product" method="POST" enctype="multipart/form-data">
@@ -1234,11 +1100,7 @@ admin_template = """
                     <button type="submit">نشر المنتج</button>
                 </form>
             </div>
-
-            <div class="collapsible-header" onclick="toggleSection('sec_products')">
-                <span>📦 قائمة المنتجات الحالية</span>
-                <span id="icon-sec_products">▼</span>
-            </div>
+            <div class="collapsible-header" onclick="toggleSection('sec_products')"><span>📦 قائمة المنتجات الحالية</span><span id="icon-sec_products">▼</span></div>
             <div id="sec_products" class="collapsible-content">
                 {% for p in products %}
                     <div class="product-row">
@@ -1253,28 +1115,19 @@ admin_template = """
         {% endif %}
         <a href="/" class="back-link">← العودة إلى المتجر الرئيسي</a>
     </div>
-
     <script>
         function toggleSection(secId) {
             const content = document.getElementById(secId);
             const icon = document.getElementById('icon-' + secId);
-            if (content.style.display === 'block') {
-                content.style.display = 'none';
-                icon.innerText = '▼';
-            } else {
-                content.style.display = 'block';
-                icon.innerText = '▲';
-            }
+            if (content.style.display === 'block') { content.style.display = 'none'; icon.innerText = '▼'; }
+            else { content.style.display = 'block'; icon.innerText = '▲'; }
         }
-
         {% if is_locked %}
         let remainingSeconds = {{ remaining_seconds }};
         const countdownEl = document.getElementById('countdown');
         const timer = setInterval(() => {
-            if (remainingSeconds <= 0) {
-                clearInterval(timer);
-                window.location.reload();
-            } else {
+            if (remainingSeconds <= 0) { clearInterval(timer); window.location.reload(); }
+            else {
                 remainingSeconds--;
                 let mins = Math.floor(remainingSeconds / 60);
                 let secs = remainingSeconds % 60;
@@ -1287,18 +1140,15 @@ admin_template = """
 </html>
 """
 
+current_html_template = default_html_template
+
 def process_and_compress_image(image_file):
     try:
         img = Image.open(image_file)
         if img.mode in ("RGBA", "P"): img = img.convert("RGB")
-        
-        try:
-            img = ImageOps.exif_transpose(img)
-        except Exception:
-            pass
-
+        try: img = ImageOps.exif_transpose(img)
+        except Exception: pass
         img.thumbnail((1000, 1000))
-        
         buffer = BytesIO()
         img.save(buffer, format="JPEG", quality=80)
         return f"data:image/jpeg;base64,{base64.b64encode(buffer.getvalue()).decode('utf-8')}"
@@ -1309,36 +1159,17 @@ def process_and_compress_image(image_file):
 def index():
     global current_html_template
     cart = get_cart()
-    
     per_page = 30
-    try:
-        page = int(request.args.get('page', 1))
-    except ValueError:
-        page = 1
-        
+    try: page = int(request.args.get('page', 1))
+    except ValueError: page = 1
     total_products = len(products)
     total_pages = (total_products + per_page - 1) // per_page if total_products > 0 else 1
-    
     if page < 1: page = 1
     if page > total_pages: page = total_pages
-    
     start_idx = (page - 1) * per_page
     end_idx = start_idx + per_page
     page_products = products[start_idx:end_idx]
-
-    return render_template_string(
-        current_html_template, 
-        products=products, 
-        page_products=page_products, 
-        current_page=page, 
-        total_pages=total_pages, 
-        auctions=auctions, 
-        config=site_config, 
-        controls=site_controls, 
-        vis=text_visibility, 
-        cart_count=len(cart), 
-        error=None
-    )
+    return render_template_string(current_html_template, products=products, page_products=page_products, current_page=page, total_pages=total_pages, auctions=auctions, config=site_config, controls=site_controls, vis=text_visibility, cart_count=len(cart), error=None)
 
 @app.route('/cart')
 def cart_page():
@@ -1352,18 +1183,10 @@ def add_to_cart_ajax(p_id):
     if product and not product.get('is_sold', False):
         cart = list(get_cart())
         already_exists = any(item['id'] == p_id for item in cart)
-        if already_exists:
-            return jsonify({"success": False, "msg": "مضاف مسبقاً"})
-        
+        if already_exists: return jsonify({"success": False, "msg": "مضاف مسبقاً"})
         import uuid
         first_img = product['images'][0] if product['images'] and len(product['images']) > 0 else ""
-        cart_item = {
-            "cart_id": str(uuid.uuid4()),
-            "id": product['id'],
-            "title": product['title'],
-            "price": product['price'],
-            "image": first_img
-        }
+        cart_item = {"cart_id": str(uuid.uuid4()), "id": product['id'], "title": product['title'], "price": product['price'], "image": first_img}
         cart.append(cart_item)
         update_cart_in_storage(cart)
         return jsonify({"success": True})
@@ -1388,70 +1211,30 @@ def place_bid(a_id):
     bidder_name = request.form.get('bidder_name', '').strip()
     bidder_phone = request.form.get('bidder_phone', '').strip()
     bid_amount_str = request.form.get('bid_amount', '').strip()
-    
     auction = next((a for a in auctions if a['id'] == a_id), None)
     if not auction: return redirect(url_for('index'))
-
     clean_phone = bidder_phone.replace(" ", "")
-
     if not clean_phone.isdigit() or len(clean_phone) < 7:
-        return render_template_string(
-            auction_detail_template, 
-            auction=auction, 
-            config=site_config, 
-            controls=site_controls, 
-            vis=text_visibility, 
-            error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!"
-        )
-
+        return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!")
     if not bid_amount_str.isdigit():
-        return render_template_string(
-            auction_detail_template, 
-            auction=auction, 
-            config=site_config, 
-            controls=site_controls, 
-            vis=text_visibility, 
-            error="❌ خطأ: السعر المقترح للمزايدة يجب أن يكون أرقاماً فقط بدون أحرف!"
-        )
-
+        return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error="❌ خطأ: السعر المقترح للمزايدة يجب أن يكون أرقاماً فقط بدون أحرف!")
     bid_amount = int(bid_amount_str)
-
     if auction.get('max_price'):
         try:
             max_val = int(re.sub(r'[^0-9]', '', str(auction['max_price'])))
             if bid_amount > max_val:
-                return render_template_string(
-                    auction_detail_template, 
-                    auction=auction, 
-                    config=site_config, 
-                    controls=site_controls, 
-                    vis=text_visibility, 
-                    error=f"❌ خطأ: عذراً، لا يمكنك تقديم مزايدة أكبر من الحد الأقصى ({auction['max_price']})!"
-                )
-        except Exception:
-            pass
-
+                return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error=f"❌ خطأ: عذراً، لا يمكنك تقديم مزايدة أكبر من الحد الأقصى ({auction['max_price']})!")
+        except Exception: pass
     if bid_amount and bidder_name:
-        if 'bids' not in auction:
-            auction['bids'] = []
-        
-        auction['bids'].append({
-            "name": bidder_name,
-            "phone": bidder_phone,
-            "amount": bid_amount
-        })
-        
+        if 'bids' not in auction: auction['bids'] = []
+        auction['bids'].append({"name": bidder_name, "phone": bidder_phone, "amount": bid_amount})
         auction['bids'] = sorted(auction['bids'], key=lambda x: x['amount'], reverse=True)
         top_bid = auction['bids'][0]
         auction['current_price'] = f"{top_bid['amount']} (بواسطة: {top_bid['name']})"
-        
         msg = f"مرحباً سامر، لدي مزايدة جديدة\nعلى القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
         encoded_msg = urllib.parse.quote(msg)
         whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
-        whatsapp_url = f"https://wa.me/{whatsapp_number}?text={encoded_msg}"
-        
-        return redirect(whatsapp_url)
-        
+        return redirect(f"https://wa.me/{whatsapp_number}?text={encoded_msg}")
     return redirect(url_for('auction_detail', a_id=a_id))
 
 @app.route('/buy-product/<int:p_id>', methods=['POST'])
@@ -1460,36 +1243,23 @@ def buy_product(p_id):
     province = request.form.get('province', '').strip()
     street = request.form.get('street', '').strip()
     phone = request.form.get('phone', '').strip()
-
     product = next((p for p in products if p['id'] == p_id), None)
     if not product: return redirect(url_for('index'))
-
     clean_phone = phone.replace(" ", "")
     if not clean_phone.isdigit() or len(clean_phone) < 7:
-        return render_template_string(
-            product_detail_template,
-            product=product,
-            config=site_config,
-            controls=site_controls,
-            vis=text_visibility,
-            error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!"
-        )
-
+        return render_template_string(product_detail_template, product=product, config=site_config, controls=site_controls, vis=text_visibility, error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!")
     if full_name and province and street and phone:
         msg = f"مرحباً سامر، لدي طلب شراء جديد\nعلى القطعة: {product['title']} (السعر: {product['price']})\nاسم الزبون: {full_name}\nالمحافظة: {province}\nالشارع: {street}\nرقم الهاتف: {phone}"
         encoded_msg = urllib.parse.quote(msg)
         whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
-        whatsapp_url = f"https://wa.me/{whatsapp_number}?text={encoded_msg}"
-        return redirect(whatsapp_url)
-
+        return redirect(f"https://wa.me/{whatsapp_number}?text={encoded_msg}")
     return redirect(url_for('product_detail', p_id=p_id))
 
 @app.route('/update-admin-whatsapp', methods=['POST'])
 def update_admin_whatsapp():
     global site_controls
     whatsapp = request.form.get('admin_whatsapp', '').strip()
-    if whatsapp:
-        site_controls['admin_whatsapp'] = whatsapp
+    if whatsapp: site_controls['admin_whatsapp'] = whatsapp
     return redirect(url_for('admin'))
 
 @app.route('/update-cod-settings', methods=['POST'])
@@ -1497,8 +1267,7 @@ def update_cod_settings():
     global site_controls
     site_controls['enable_cod_note'] = True if request.form.get('enable_cod_note') == 'on' else False
     text = request.form.get('cod_note_text', '').strip()
-    if text:
-        site_controls['cod_note_text'] = text
+    if text: site_controls['cod_note_text'] = text
     return redirect(url_for('admin'))
 
 @app.route('/update-password', methods=['POST'])
@@ -1506,8 +1275,7 @@ def update_password():
     global ADMIN_PASSWORD
     current_pass = request.form.get('current_password', '')
     new_pass = request.form.get('new_password', '').strip()
-    if current_pass == ADMIN_PASSWORD and new_pass:
-        ADMIN_PASSWORD = new_pass
+    if current_pass == ADMIN_PASSWORD and new_pass: ADMIN_PASSWORD = new_pass
     return redirect(url_for('admin'))
 
 @app.route('/admin-add-auction', methods=['POST'])
@@ -1521,20 +1289,8 @@ def admin_add_auction():
     duration_hours = int(request.form.get('duration_hours', 48))
     end_time = datetime.now() + timedelta(hours=duration_hours)
     images_list = [process_and_compress_image(f) for f in request.files.getlist('auction_images') if f and f.filename != '']
-    
     if title and current_price:
-        auction_data = {
-            "id": auction_id_counter,
-            "title": title,
-            "description": description,
-            "current_price": current_price,
-            "min_bid": min_bid,
-            "max_price": max_price,
-            "end_time": end_time.isoformat(),
-            "images": [img for img in images_list if img],
-            "bids": []
-        }
-        auctions.insert(0, auction_data)
+        auctions.insert(0, {"id": auction_id_counter, "title": title, "description": description, "current_price": current_price, "min_bid": min_bid, "max_price": max_price, "end_time": end_time.isoformat(), "images": [img for img in images_list if img], "bids": []})
         auction_id_counter += 1
     return redirect(url_for('admin'))
 
@@ -1572,11 +1328,8 @@ def add_review():
     global review_id_counter, reviews
     name = request.form.get('reviewer_name', '').strip()
     comment = request.form.get('reviewer_comment', '').strip()
-    try:
-        rating = int(request.form.get('rating', 5))
-    except ValueError:
-        rating = 5
-
+    try: rating = int(request.form.get('rating', 5))
+    except ValueError: rating = 5
     if name and comment:
         reviews.insert(0, {"id": review_id_counter, "name": name, "rating": rating, "comment": comment})
         review_id_counter += 1
@@ -1614,19 +1367,11 @@ def add_product():
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
-    
     numeric_price = 0.0
-    try:
-        numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
-    except Exception:
-        pass
-
+    try: numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
+    except Exception: pass
     if title:
-        products.insert(0, {
-            "id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity,
-            "description": description, "contact_type": "phone", "contact_value": "",
-            "images": [img for img in images_list if img], "is_sold": False
-        })
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False})
         product_id_counter += 1
     return redirect(url_for('index'))
 
@@ -1638,19 +1383,11 @@ def admin_add_product():
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
-    
     numeric_price = 0.0
-    try:
-        numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
-    except Exception:
-        pass
-
+    try: numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
+    except Exception: pass
     if title:
-        products.insert(0, {
-            "id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity,
-            "description": description, "contact_type": "phone", "contact_value": "",
-            "images": [img for img in images_list if img], "is_sold": False
-        })
+        products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False})
         product_id_counter += 1
     return redirect(url_for('admin'))
 
@@ -1719,15 +1456,12 @@ def admin():
     global ADMIN_PASSWORD, current_html_template, login_attempts, lockout_until
     authorized = False
     error = False
-    
     current_time = time.time()
     is_locked = current_time < lockout_until
     remaining_seconds = int(lockout_until - current_time) if is_locked else 0
-    
     if request.method == 'POST':
         if is_locked:
             return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=False, error=True, is_locked=True, remaining_seconds=remaining_seconds, raw_template=current_html_template, color_names_ar=color_names_ar)
-            
         if request.form.get('password') == ADMIN_PASSWORD:
             authorized = True
             login_attempts = 0
@@ -1739,7 +1473,6 @@ def admin():
                 is_locked = True
                 remaining_seconds = 900
                 login_attempts = 0
-                
     remaining_attempts = max(0, 5 - login_attempts)
     return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
 
