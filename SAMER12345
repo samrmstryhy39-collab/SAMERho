@@ -96,6 +96,7 @@ site_controls = {
 }
 
 text_visibility = {
+    "settings_btn_text": True,
     "heading_products": True,
     "no_products": True,
     "heading_auctions": True,
@@ -131,6 +132,7 @@ site_config = {
     "subtitle": "لكل قطعة حكاية",
     "bg_image": "",
     "texts": {
+        "settings_btn_text": "⚙️ الإعدادات ▼",
         "heading_products": "المنتجات المعروضه",
         "no_products": "لا توجد منتجات معروضة حالياً.",
         "heading_auctions": "🔥 المزادات الحالية المشتعلة",
@@ -218,7 +220,8 @@ default_html_template = """
         
         .top-bar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; position: relative; }
         .dropdown { position: relative; display: inline-block; }
-        .settings-btn { background: #1e1e1e; border: 1px solid #444; padding: 8px 16px; border-radius: 8px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-block; }
+        .settings-btn { background: #111111; border: 1px solid #333333; padding: 10px 18px; border-radius: 12px; text-decoration: none; color: #ffffff; font-size: 13px; font-weight: bold; cursor: pointer; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .settings-btn:hover { background: #1a1a1a; border-color: #25d366; }
         .dropdown-content { display: none; position: absolute; left: 0; background-color: #111; min-width: 190px; box-shadow: 0px 8px 16px rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 8px; z-index: 10; overflow: hidden; margin-top: 5px; }
         .dropdown-content a { color: #fff; padding: 10px 14px; text-decoration: none; display: flex; justify-content: space-between; align-items: center; font-size: 13px; text-align: right; border-bottom: 1px solid #222; }
         .dropdown-content a:last-child { border-bottom: none; }
@@ -292,7 +295,7 @@ default_html_template = """
 
     <div class="top-bar">
         <div class="dropdown">
-            <button onclick="toggleDropdown()" class="settings-btn">⚙️ الإعدادات ▼</button>
+            {% if vis.settings_btn_text %}<button onclick="toggleDropdown()" class="settings-btn">{{ config.texts.settings_btn_text }}</button>{% endif %}
             <div id="settingsDropdown" class="dropdown-content">
                 {% if controls.enable_cart %}
                     <a href="/cart">🛒 سلة المشتريات <span class="cart-badge">{{ cart_count }}</span></a>
@@ -457,7 +460,7 @@ default_html_template = """
             document.getElementById("settingsDropdown").classList.toggle("show");
         }
         window.onclick = function(event) {
-            if (!event.target.matches('.settings-btn')) {
+            if (!event.target.matches('.settings-btn') && !event.target.closest('.settings-btn')) {
                 var dropdowns = document.getElementsByClassName("dropdown-content");
                 for (var i = 0; i < dropdowns.length; i++) {
                     var openDropdown = dropdowns[i];
