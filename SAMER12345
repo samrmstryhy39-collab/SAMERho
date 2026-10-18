@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import urllib.parse
 import re
 import json
+import time
 
 app = Flask(__name__)
 app.secret_key = 'samemomomo_secret_key'
@@ -23,6 +24,10 @@ auction_id_counter = 1
 note_id_counter = 1
 review_id_counter = 3
 ADMIN_PASSWORD = "samemomomo**1"
+
+# متغيرات حماية تسجيل الدخول (قفل مؤقت بعد 5 محاولات خاطئة)
+login_attempts = 0
+lockout_until = 0
 
 CART_FILE = "persistent_cart.json"
 
@@ -866,6 +871,7 @@ admin_template = """
         input[type="text"], input[type="password"], input[type="number"], textarea, select { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; font-size: 13px; outline: none; }
         input[type="color"] { width: 50px; height: 32px; border: 1px solid #333; border-radius: 6px; background: #000; cursor: pointer; padding: 0; vertical-align: middle; }
         button { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; background: #25d366; color: white; border: none; font-weight: bold; cursor: pointer; font-size: 15px; }
+        button:disabled { background: #444 !important; cursor: not-allowed; }
         .product-row { display: flex; justify-content: space-between; align-items: center; background: #000; padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #222; gap: 10px; }
         .product-actions { display: flex; gap: 8px; align-items: center; }
         .delete-btn { background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; width: auto; margin: 0; }
@@ -892,16 +898,24 @@ admin_template = """
     <div class="container">
         <h2>لوحة الإعدادات والتحكم</h2>
         {% if not authorized %}
-            <form method="POST">
-                <p style="margin-bottom: 12px; font-size: 14px; color: #ccc; text-align: center;">الرجاء إدخال رمز المرور للوصول:</p>
-                <input type="password" name="password" placeholder="رمز المرور" required>
-                <button type="submit">دخول</button>
-            </form>
-            {% if error %}<p style="color: #ef4444; text-align: center; font-size: 13px; margin-top: 10px;">❌ رمز المرور غير صحيح!</p>{% endif %}
-            
-            <a href="https://wa.me/{{ controls.admin_whatsapp }}?text={{ 'مرحباً سامر، لقد نسيت كلمة مرور لوحة التحكم الخاصة بمتجر عتيق، أرجو مساعدتي في استرجاعها.' | urlencode }}" target="_blank" class="forgot-pass-btn">
-                🔑 نسيت كلمة السر؟ (إرسال تنبيه واتساب)
-            </a>
+            {% if is_locked %}
+                <div style="background: rgba(220, 38, 38, 0.1); border: 1px solid #dc2626; color: #ef4444; padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
+                    <p style="font-weight: bold; margin-bottom: 5px;">⚠️ تم حظر تسجيل الدخول مؤقتاً!</p>
+                    <p style="font-size: 13px;">لقد أدخلت كلمة المرور بشكل خاطئ 5 مرات. يرجى الانتظار:</p>
+                    <p id="countdown" style="font-size: 18px; font-weight: bold; margin-top: 8px; color: #fbbf24;">15:00</p>
+                </div>
+            {% else %}
+                <form method="POST">
+                    <p style="margin-bottom: 12px; font-size: 14px; color: #ccc; text-align: center;">الرجاء إدخال رمز المرور للوصول:</p>
+                    <input type="password" name="password" placeholder="رمز المرور" required>
+                    <button type="submit">دخول</button>
+                </form>
+                {% if error %}<p style="color: #ef4444; text-align: center; font-size: 13px; margin-top: 10px;">❌ رمز المرور غير صحيح! (المحاولات المتبقية: {{ remaining_attempts }})</p>{% endif %}
+                
+                <a href="https://wa.me/{{ controls.admin_whatsapp }}?text={{ 'مرحباً سامر، لقد نسيت كلمة مرور لوحة التحكم الخاصة بمتجر عتيق، أرجو مساعدتي في استرجاعها.' | urlencode }}" target="_blank" class="forgot-pass-btn">
+                    🔑 نسيت كلمة السر؟ (إرسال تنبيه واتساب)
+                </a>
+            {% endif %}
         {% else %}
             <p style="color: #25d366; text-align: center; margin-bottom: 15px; font-weight: bold;">تم تسجيل الدخول بنجاح</p>
             
@@ -1143,6 +1157,22 @@ admin_template = """
                 icon.innerText = '▲';
             }
         }
+
+        {% if is_locked %}
+        let remainingSeconds = {{ remaining_seconds }};
+        const countdownEl = document.getElementById('countdown');
+        const timer = setInterval(() => {
+            if (remainingSeconds <= 0) {
+                clearInterval(timer);
+                window.location.reload();
+            } else {
+                remainingSeconds--;
+                let mins = Math.floor(remainingSeconds / 60);
+                let secs = remainingSeconds % 60;
+                countdownEl.innerText = (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+            }
+        }, 1000);
+        {% endif %}
     </script>
 </body>
 </html>
@@ -1555,15 +1585,32 @@ def toggle_sold(p_id):
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
-    global ADMIN_PASSWORD, current_html_template
+    global ADMIN_PASSWORD, current_html_template, login_attempts, lockout_until
     authorized = False
     error = False
+    
+    current_time = time.time()
+    is_locked = current_time < lockout_until
+    remaining_seconds = int(lockout_until - current_time) if is_locked else 0
+    
     if request.method == 'POST':
+        if is_locked:
+            return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=False, error=True, is_locked=True, remaining_seconds=remaining_seconds, raw_template=current_html_template, color_names_ar=color_names_ar)
+            
         if request.form.get('password') == ADMIN_PASSWORD:
             authorized = True
+            login_attempts = 0 # إعادة ضبط المحاولات عند النجاح
         else:
             error = True
-    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, raw_template=current_html_template, color_names_ar=color_names_ar)
+            login_attempts += 1
+            if login_attempts >= 5:
+                lockout_until = current_time + 900  # 900 ثانية = 15 دقيقة
+                is_locked = True
+                remaining_seconds = 900
+                login_attempts = 0 # إعادة ضبط العداد بعد القفل
+                
+    remaining_attempts = max(0, 5 - login_attempts)
+    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
