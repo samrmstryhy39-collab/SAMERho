@@ -241,6 +241,17 @@ color_names_ar = {
     "filter_btn_text": "لون أيقونة ونصوص زر الفلترة"
 }
 
+def get_destination_url(target, encoded_msg=""):
+    target = target.strip()
+    if target.startswith("http://") or target.startswith("https://"):
+        return target
+    else:
+        clean_num = re.sub(r'[^0-9]', '', target)
+        if encoded_msg:
+            return f"https://api.whatsapp.com/send?phone={clean_num}&text={encoded_msg}"
+        else:
+            return f"https://wa.me/{clean_num}"
+
 product_detail_template = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -1018,11 +1029,11 @@ admin_template = """
                     <button type="submit" style="background: #dc2626;">تحديث رمز المرور</button>
                 </form>
             </div>
-            <div class="collapsible-header" onclick="toggleSection('sec_wa')"><span>📱 رقم الواتساب الخاص بك (لتلقي الطلبات والمزادات)</span><span id="icon-sec_wa">▼</span></div>
+            <div class="collapsible-header" onclick="toggleSection('sec_wa')"><span>📱 رابط التواصل أو رقم الواتساب (للطبقات، المزادات، أو الإنستغرام)</span><span id="icon-sec_wa">▼</span></div>
             <div id="sec_wa" class="collapsible-content">
                 <form action="/update-admin-whatsapp" method="POST">
-                    <label>رقم الواتساب (مع رمز الدولة بدون +):</label><input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000" required>
-                    <button type="submit">حفظ رقم الواتساب</button>
+                    <label>أدخل رقم واتساب (أو رابط صفحة إنستغرام/فيسبوك كاملاً):</label><input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000 أو https://instagram.com/..." required>
+                    <button type="submit">حفظ وجهة التواصل</button>
                 </form>
             </div>
             <div class="collapsible-header" onclick="toggleSection('sec_cod')"><span>💵 إعدادات جملة الدفع عند الاستلام</span><span id="icon-sec_cod">▼</span></div>
@@ -1314,8 +1325,9 @@ def place_bid(a_id):
         auction['current_price'] = f"{top_bid['amount']} (بواسطة: {top_bid['name']})"
         msg = f"مرحباً سامر، لدي مزايدة جديدة\nعلى القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
         encoded_msg = urllib.parse.quote(msg)
-        whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
-        return redirect(f"https://api.whatsapp.com/send?phone={whatsapp_number}&text={encoded_msg}")
+        target_setting = site_controls.get('admin_whatsapp', '962790000000')
+        final_url = get_destination_url(target_setting, encoded_msg)
+        return redirect(final_url)
     return redirect(url_for('auction_detail', a_id=a_id))
 
 @app.route('/buy-product/<int:p_id>', methods=['POST'])
@@ -1332,8 +1344,9 @@ def buy_product(p_id):
     if full_name and province and street and phone:
         msg = f"مرحباً سامر، لدي طلب شراء جديد\nعلى القطعة: {product['title']} (السعر: {product['price']})\nاسم الزبون: {full_name}\nالمحافظة: {province}\nالشارع: {street}\nرقم الهاتف: {phone}"
         encoded_msg = urllib.parse.quote(msg)
-        whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
-        return redirect(f"https://api.whatsapp.com/send?phone={whatsapp_number}&text={encoded_msg}")
+        target_setting = site_controls.get('admin_whatsapp', '962790000000')
+        final_url = get_destination_url(target_setting, encoded_msg)
+        return redirect(final_url)
     return redirect(url_for('product_detail', p_id=p_id))
 
 @app.route('/update-admin-whatsapp', methods=['POST'])
