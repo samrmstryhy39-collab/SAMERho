@@ -602,7 +602,7 @@ default_html_template = """
             <div class="auction-details">
                 <span>السعر الحالي: 
                     {% if a.bids and a.bids|length > 0 %}
-                        {% set sorted_bids = a.bids|sort(attribute='amount', reverse=True) %}
+                        {% set sorted_bids = a.bids|sort(attribute='raw_amount', reverse=True) %}
                         <select style="background: #000; color: #25d366; border: 1px solid #333; padding: 4px 8px; border-radius: 6px; font-weight: bold; outline: none;">
                             <option value="{{ sorted_bids[0].amount }}">{{ sorted_bids[0].amount }} (بواسطة: {{ sorted_bids[0].name }})</option>
                             {% for b in sorted_bids[1:] %}<option value="{{ b.amount }}">{{ b.amount }} (بواسطة: {{ b.name }})</option>{% endfor %}
@@ -843,7 +843,7 @@ auction_detail_template = """
         <div class="info">
             <span>السعر الحالي:</span>
             {% if auction.bids and auction.bids|length > 0 %}
-                {% set sorted_bids = auction.bids|sort(attribute='amount', reverse=True) %}
+                {% set sorted_bids = auction.bids|sort(attribute='raw_amount', reverse=True) %}
                 <select style="background: #000; color: #25d366; border: 1px solid #333; padding: 6px 10px; border-radius: 6px; font-weight: bold; outline: none; font-size: 14px;">
                     <option value="{{ sorted_bids[0].amount }}">{{ sorted_bids[0].amount }} (بواسطة: {{ sorted_bids[0].name }})</option>
                     {% for b in sorted_bids[1:] %}<option value="{{ b.amount }}">{{ b.amount }} (بواسطة: {{ b.name }})</option>{% endfor %}
@@ -1340,30 +1340,48 @@ def place_bid(a_id):
     bid_amount_str = request.form.get('bid_amount', '').strip()
     auction = next((a for a in auctions if a['id'] == a_id), None)
     if not auction: return redirect(url_for('index'))
+    
     clean_phone = bidder_phone.replace(" ", "")
     if not clean_phone.isdigit() or len(clean_phone) < 7:
         return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!")
     if not bid_amount_str.isdigit():
         return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error="❌ خطأ: السعر المقترح للمزايدة يجب أن يكون أرقاماً فقط بدون أحرف!")
+    
     bid_raw = int(bid_amount_str)
+    
+    # تحديد السعر الحالي للمقارنة
+    current_highest_raw = 0
+    if auction.get('bids') and len(auction['bids']) > 0:
+        current_highest_raw = max(b['raw_amount'] for b in auction['bids'])
+    else:
+        current_highest_raw = int(re.sub(r'[^0-9]', '', str(auction['current_price'])))
+    
+    # منع المزايدات المساوية أو الأقل من السعر الحالي
+    if bid_raw <= current_highest_raw:
+        return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error=f"❌ خطأ: عذراً، يجب أن تكون المزايدة أعلى من السعر الحالي ({current_highest_raw})!")
+
     formatted_bid_amount = format_price(str(bid_raw))
+    
     if auction.get('max_price'):
         try:
             max_val = int(re.sub(r'[^0-9]', '', str(auction['max_price'])))
             if bid_raw > max_val:
                 return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error=f"❌ خطأ: عذراً، لا يمكنك تقديم مزايدة أكبر من الحد الأقصى ({auction['max_price']})!")
         except Exception: pass
+        
     if bid_raw and bidder_name:
         if 'bids' not in auction: auction['bids'] = []
         auction['bids'].append({"name": bidder_name, "phone": bidder_phone, "amount": formatted_bid_amount, "raw_amount": bid_raw})
         auction['bids'] = sorted(auction['bids'], key=lambda x: x['raw_amount'], reverse=True)
         top_bid = auction['bids'][0]
         auction['current_price'] = f"{top_bid['amount']} (بواسطة: {top_bid['name']})"
+        
         msg = f"مرحباً سامر، لدي مزايدة جديدة\nعلى القطعة: {auction['title']}\nقيمة المزايدة: {formatted_bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
         encoded_msg = urllib.parse.quote(msg)
         target_setting = site_controls.get('admin_whatsapp', '962790000000')
         final_url = get_destination_url(target_setting, encoded_msg)
         return redirect(final_url)
+        
     return redirect(url_for('auction_detail', a_id=a_id))
 
 @app.route('/buy-product/<int:p_id>', methods=['POST'])
@@ -1647,4 +1665,4 @@ def admin():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(format(0, '0'), port=port)
+    app.run(host='0.0.0.0', port=port)
