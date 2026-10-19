@@ -1481,7 +1481,8 @@ def admin_add_auction():
     except ValueError:
         duration_hours = 48
         
-    end_time = datetime.now() + timedelta(hours=duration_hours)
+    # إضافة تعويض فارق التوقيت (3 ساعات) لضمان مطابقة العداد للساعات المطلوبة بدقة
+    end_time = datetime.now() + timedelta(hours=duration_hours) + timedelta(hours=3)
     
     current_price = format_price(raw_price)
     min_bid = format_price(raw_min)
