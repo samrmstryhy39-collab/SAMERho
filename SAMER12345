@@ -102,7 +102,7 @@ site_controls = {
     "logo_image": "",
     "logo_size": "130px",
     "enable_logo_pulse": True,
-    "logo_animation_style": "rotate", # خيارات: rotate (دوران), pulse (نبض كلاسيكي), flash (وميض سريع)
+    "logo_animation_style": "rotate",
     "logo_pulse_speed": "3s",
     "logo_pulse_color": "#d97706",
     "admin_whatsapp": "962790000000",
@@ -441,7 +441,6 @@ default_html_template = """
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
         
-        /* 1. حركة الدوران والالتفاف */
         @keyframes rotatingGlow {
             0% { box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 10px 0 25px rgba(217, 119, 6, 0.4); }
             33% { box-shadow: 0 0 20px {{ controls.logo_pulse_color }}, 0 10px 25px rgba(217, 119, 6, 0.4); }
@@ -449,14 +448,12 @@ default_html_template = """
             100% { box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 10px 0 25px rgba(217, 119, 6, 0.4); }
         }
 
-        /* 2. حركة النبض الكلاسيكي */
         @keyframes classicPulse {
             0% { box-shadow: 0 0 10px {{ controls.logo_pulse_color }}; }
             50% { box-shadow: 0 0 25px {{ controls.logo_pulse_color }}, 0 0 40px {{ controls.logo_pulse_color }}; }
             100% { box-shadow: 0 0 10px {{ controls.logo_pulse_color }}; }
         }
 
-        /* 3. حركة الوميض السريع */
         @keyframes flashPulse {
             0% { box-shadow: 0 0 5px {{ controls.logo_pulse_color }}; opacity: 0.8; }
             50% { box-shadow: 0 0 30px {{ controls.logo_pulse_color }}; opacity: 1; }
@@ -1478,7 +1475,13 @@ def admin_add_auction():
     raw_price = request.form.get('current_price', '').strip()
     raw_min = request.form.get('min_bid', '').strip()
     raw_max = request.form.get('max_price', '').strip()
-    duration_hours = int(request.form.get('duration_hours', 48))
+    
+    # قراءة المدة بالساعات بشكل صحيح وآمن
+    try:
+        duration_hours = int(request.form.get('duration_hours', 48))
+    except ValueError:
+        duration_hours = 48
+        
     end_time = datetime.now() + timedelta(hours=duration_hours)
     
     current_price = format_price(raw_price)
