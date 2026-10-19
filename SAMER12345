@@ -1315,7 +1315,6 @@ def place_bid(a_id):
         msg = f"مرحباً سامر، لدي مزايدة جديدة\nعلى القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
         encoded_msg = urllib.parse.quote(msg)
         whatsapp_number = site_controls.get('admin_whatsapp', '962790000000')
-        # تم تعديل الرابط ليكون مباشر وصحيح 100% ليمنع ظهور خطأ 404
         return redirect(f"https://api.whatsapp.com/send?phone={whatsapp_number}&text={encoded_msg}")
     return redirect(url_for('auction_detail', a_id=a_id))
 
@@ -1581,7 +1580,7 @@ def admin():
                 remaining_seconds = 900
                 login_attempts = 0
     remaining_attempts = max(0, 5 - login_attempts)
-    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
+    return render_template_string(admin_template, products=products, auctions=auctions, notes=notes, reviews=reviews, config=site_config, controls=site_controls, vis=text_visibility, stats=site_stats, authorized=authorized, error=error, is_locked=is_locked, remaining_seconds=remaining_seconds, remaining_attempts=remaining_attempts, raw_template=current_html_template, color_names_ar=color_names_ar)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
