@@ -102,6 +102,7 @@ site_controls = {
     "logo_image": "",
     "logo_size": "130px",
     "enable_logo_pulse": True,
+    "logo_animation_style": "rotate", # خيارات: rotate (دوران), pulse (نبض كلاسيكي), flash (وميض سريع)
     "logo_pulse_speed": "3s",
     "logo_pulse_color": "#d97706",
     "admin_whatsapp": "962790000000",
@@ -440,26 +441,48 @@ default_html_template = """
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
         
+        /* 1. حركة الدوران والالتفاف */
         @keyframes rotatingGlow {
-            0% { 
-                box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 
-                            10px 0 25px rgba(217, 119, 6, 0.4); 
-            }
-            33% { 
-                box-shadow: 0 0 20px {{ controls.logo_pulse_color }}, 
-                            0 10px 25px rgba(217, 119, 6, 0.4); 
-            }
-            66% { 
-                box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 
-                            -10px 0 25px rgba(217, 119, 6, 0.4); 
-            }
-            100% { 
-                box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 
-                            10px 0 25px rgba(217, 119, 6, 0.4); 
-            }
+            0% { box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 10px 0 25px rgba(217, 119, 6, 0.4); }
+            33% { box-shadow: 0 0 20px {{ controls.logo_pulse_color }}, 0 10px 25px rgba(217, 119, 6, 0.4); }
+            66% { box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, -10px 0 25px rgba(217, 119, 6, 0.4); }
+            100% { box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 10px 0 25px rgba(217, 119, 6, 0.4); }
         }
 
-        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 50%; padding: 5px; width: {{ controls.logo_size }}; height: {{ controls.logo_size }}; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: rotatingGlow {{ controls.logo_pulse_speed }} infinite linear;{% endif %} }
+        /* 2. حركة النبض الكلاسيكي */
+        @keyframes classicPulse {
+            0% { box-shadow: 0 0 10px {{ controls.logo_pulse_color }}; }
+            50% { box-shadow: 0 0 25px {{ controls.logo_pulse_color }}, 0 0 40px {{ controls.logo_pulse_color }}; }
+            100% { box-shadow: 0 0 10px {{ controls.logo_pulse_color }}; }
+        }
+
+        /* 3. حركة الوميض السريع */
+        @keyframes flashPulse {
+            0% { box-shadow: 0 0 5px {{ controls.logo_pulse_color }}; opacity: 0.8; }
+            50% { box-shadow: 0 0 30px {{ controls.logo_pulse_color }}; opacity: 1; }
+            100% { box-shadow: 0 0 5px {{ controls.logo_pulse_color }}; opacity: 0.8; }
+        }
+
+        .logo-img-container { 
+            display: inline-block; 
+            background: {{ config.colors.logo_bg }}; 
+            border: 2px solid {{ config.colors.logo_border }}; 
+            border-radius: 50%; 
+            padding: 5px; 
+            width: {{ controls.logo_size }}; 
+            height: {{ controls.logo_size }}; 
+            overflow: hidden; 
+            box-sizing: border-box; 
+            {% if controls.enable_logo_pulse %}
+                {% if controls.logo_animation_style == 'rotate' %}
+                    animation: rotatingGlow {{ controls.logo_pulse_speed }} infinite linear;
+                {% elif controls.logo_animation_style == 'pulse' %}
+                    animation: classicPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;
+                {% elif controls.logo_animation_style == 'flash' %}
+                    animation: flashPulse {{ controls.logo_pulse_speed }} infinite steps(2, start);
+                {% endif %}
+            {% endif %}
+        }
         .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         
@@ -1124,7 +1147,7 @@ admin_template = """
                     <button type="submit" style="margin-top: 15px;">حفظ التصميم</button>
                 </form>
             </div>
-            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع الدائري وحجمه والنبض</span><span id="icon-sec_logo">▼</span></div>
+            <div class="collapsible-header" onclick="toggleSection('sec_logo')"><span>🖼️ إدارة صورة شعار الموقع الدائري والحجم والحركات</span><span id="icon-sec_logo">▼</span></div>
             <div id="sec_logo" class="collapsible-content">
                 <form action="/update-logo" method="POST" enctype="multipart/form-data">
                     <label class="checkbox-label"><input type="checkbox" name="use_logo_image" {% if controls.use_logo_image %}checked{% endif %}> تفعيل صورة الشعار الدائري في الموقع</label>
@@ -1137,8 +1160,16 @@ admin_template = """
                         <option value="210px" {% if controls.logo_size == '210px' %}selected{% endif %}>كبير جداً (210 بكسل)</option>
                     </select>
                     <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
-                    <label class="checkbox-label"><input type="checkbox" name="enable_logo_pulse" {% if controls.enable_logo_pulse %}checked{% endif %}> تشغيل حركة الالتفاف والدوران للإضاءة الدائرية ✨</label>
-                    <label>سرعة الدوران والنبض (بالثواني):</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_logo_pulse" {% if controls.enable_logo_pulse %}checked{% endif %}> تفعيل إضاءة وتوهج الشعار الدائري ✨</label>
+                    
+                    <label>اختر شكل وحركة الإضاءة:</label>
+                    <select name="logo_animation_style" style="background:#000; color:#fff; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px; width:100%;">
+                        <option value="rotate" {% if controls.logo_animation_style == 'rotate' %}selected{% endif %}>إضاءة متلاحقة تلف وتدور (دوران)</option>
+                        <option value="pulse" {% if controls.logo_animation_style == 'pulse' %}selected{% endif %}>النبض الكلاسيكي (تكبير وتصغير)</option>
+                        <option value="flash" {% if controls.logo_animation_style == 'flash' %}selected{% endif %}>نبض سريع ووامض (Flash)</option>
+                    </select>
+
+                    <label>سرعة الحركة (بالثواني):</label>
                     <select name="logo_pulse_speed" style="background:#000; color:#fff; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px; width:100%;">
                         <option value="5s" {% if controls.logo_pulse_speed == '5s' %}selected{% endif %}>بطيء (5 ثواني)</option>
                         <option value="3s" {% if controls.logo_pulse_speed == '3s' %}selected{% endif %}>متوسط (3 ثواني - موصى به)</option>
@@ -1147,7 +1178,7 @@ admin_template = """
                     <label>لون التوهج والإضاءة:</label>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                         <input type="color" name="logo_pulse_color" value="{{ controls.logo_pulse_color }}">
-                        <span style="font-size: 12px; color: #aaa;">اختر لون التوهج المتحرك</span>
+                        <span style="font-size: 12px; color: #aaa;">اختر لون التوهج</span>
                     </div>
                     <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشعار ✅</button>
                 </form>
@@ -1349,14 +1380,12 @@ def place_bid(a_id):
     
     bid_raw = int(bid_amount_str)
     
-    # تحديد السعر الحالي للمقارنة
     current_highest_raw = 0
     if auction.get('bids') and len(auction['bids']) > 0:
         current_highest_raw = max(b['raw_amount'] for b in auction['bids'])
     else:
         current_highest_raw = int(re.sub(r'[^0-9]', '', str(auction['current_price'])))
     
-    # منع المزايدات المساوية أو الأقل من السعر الحالي
     if bid_raw <= current_highest_raw:
         return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error=f"❌ خطأ: عذراً، يجب أن تكون المزايدة أعلى من السعر الحالي ({current_highest_raw})!")
 
@@ -1569,6 +1598,10 @@ def update_logo():
     site_controls['use_logo_image'] = True if request.form.get('use_logo_image') else False
     site_controls['enable_logo_pulse'] = True if request.form.get('enable_logo_pulse') else False
     
+    anim_style = request.form.get('logo_animation_style')
+    if anim_style:
+        site_controls['logo_animation_style'] = anim_style
+        
     speed = request.form.get('logo_speed') or request.form.get('logo_pulse_speed')
     if speed:
         site_controls['logo_pulse_speed'] = speed
