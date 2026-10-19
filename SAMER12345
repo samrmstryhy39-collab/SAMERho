@@ -784,7 +784,7 @@ default_html_template = """
                     const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                     const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                     const seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                    timer.innerHTML = `⏳ متبقي: ${days}د ${hours}س ${minutes}د ${seconds}ث`;
+                    timer.innerHTML = `⏳ متبقي: ${days} يوم و ${hours}س ${minutes}د ${seconds}ث`;
                 }
             });
         }
@@ -1476,7 +1476,6 @@ def admin_add_auction():
     raw_min = request.form.get('min_bid', '').strip()
     raw_max = request.form.get('max_price', '').strip()
     
-    # قراءة المدة بالساعات بشكل صحيح وآمن
     try:
         duration_hours = int(request.form.get('duration_hours', 48))
     except ValueError:
