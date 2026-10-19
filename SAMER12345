@@ -95,6 +95,7 @@ site_controls = {
     "enable_forgot_pass": True,
     "enable_scroll_top": True,
     "enable_marquee": True,
+    "currency_symbol": "د.أ",
     "marquee_text": "🔥 أهلاً بكم في متجر عتيق - كل قطعة أصلية ولها حكاية فريدة 🏛️ | توصيل سريع لجميع المحافظات 🚚",
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
@@ -163,7 +164,7 @@ site_config = {
         "label_title": "اسم المنتج أو القطعة",
         "input_title_placeholder": "أدخل اسم القطعة",
         "label_price": "السعر",
-        "input_price_placeholder": "أدخل السعر",
+        "input_price_placeholder": "أدخل الرقم فقط (مثال: 15)",
         "label_quantity": "الكمية المتوفرة",
         "input_quantity_placeholder": "أدخل الكمية (مثال: 1)",
         "label_description": "نبذة أو قصة عن المنتج",
@@ -251,6 +252,19 @@ def get_destination_url(target, encoded_msg=""):
             return f"https://api.whatsapp.com/send?phone={clean_num}&text={encoded_msg}"
         else:
             return f"https://wa.me/{clean_num}"
+
+def format_price(raw_price):
+    if not raw_price:
+        return ""
+    clean_val = str(raw_price).strip()
+    curr = site_controls.get("currency_symbol", "د.أ")
+    # إذا كان المدخل يحتوي مسبقاً على العملة أو نص، نتركه أو نضيفه إذا كان رقماً بحتاً
+    if curr in clean_val:
+        return clean_val
+    numbers_only = re.sub(r'[^0-9.]', '', clean_val)
+    if numbers_only:
+        return f"{numbers_only} {curr}"
+    return clean_val
 
 product_detail_template = """
 <!DOCTYPE html>
@@ -642,7 +656,7 @@ default_html_template = """
                 <input type="text" name="title" {% if vis.input_title_placeholder %}placeholder="{{ config.texts.input_title_placeholder }}"{% endif %} required>
             </div>
             <div class="input-group">
-                {% if vis.label_price %}<label style="color: {{ config.colors.label_title }};">{{ config.texts.label_price }}</label>{% endif %}
+                {% if vis.label_price %}<label style="color: {{ config.colors.label_title }};">{{ config.texts.label_price }} ({{ controls.currency_symbol }})</label>{% endif %}
                 <input type="text" name="price" {% if vis.input_price_placeholder %}placeholder="{{ config.texts.input_price_placeholder }}"{% endif %}>
             </div>
             <div class="input-group">
@@ -835,7 +849,7 @@ auction_detail_template = """
             {% if vis.bid_phone_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_phone_label }}</label>{% endif %}
             <input type="text" name="bidder_phone" placeholder="أدخل رقم هاتفك" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
             {% if vis.bid_amount_label %}<label style="display: block; margin-bottom: 5px; font-size: 13px;">{{ config.texts.bid_amount_label }}</label>{% endif %}
-            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+            <input type="text" name="bid_amount" placeholder="أدخل مبلغ المزايدة الجديد (أرقام فقط)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
             <button type="submit">{{ config.texts.bid_submit_btn }}</button>
         </form>
         <a href="/" class="back">← العودة إلى المتجر الرئيسي</a>
@@ -1011,6 +1025,15 @@ admin_template = """
                 {% endif %}
             </div>
 
+            <div class="collapsible-header" onclick="toggleSection('sec_currency')"><span>💵 إعدادات عملة المتجر (رمز العملة)</span><span id="icon-sec_currency">▼</span></div>
+            <div id="sec_currency" class="collapsible-content">
+                <form action="/update-currency" method="POST">
+                    <label>رمز العملة الرسمي (يتم إضافته تلقائياً بجانب الأسعار):</label>
+                    <input type="text" name="currency_symbol" value="{{ controls.currency_symbol }}" placeholder="مثال: د.أ" required>
+                    <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ رمز العملة ✅</button>
+                </form>
+            </div>
+
             <div class="collapsible-header" onclick="toggleSection('sec_marquee')"><span>📢 إعدادات الشريط الإعلاني المتحرك</span><span id="icon-sec_marquee">▼</span></div>
             <div id="sec_marquee" class="collapsible-content">
                 <form action="/update-marquee" method="POST">
@@ -1029,10 +1052,10 @@ admin_template = """
                     <button type="submit" style="background: #dc2626;">تحديث رمز المرور</button>
                 </form>
             </div>
-            <div class="collapsible-header" onclick="toggleSection('sec_wa')"><span>📱 رابط التواصل أو رقم الواتساب (للطبقات، المزادات، أو الإنستغرام)</span><span id="icon-sec_wa">▼</span></div>
+            <div class="collapsible-header" onclick="toggleSection('sec_wa')"><span>📱 رابط التواصل أو رقم الواتساب</span><span id="icon-sec_wa">▼</span></div>
             <div id="sec_wa" class="collapsible-content">
                 <form action="/update-admin-whatsapp" method="POST">
-                    <label>أدخل رقم واتساب (أو رابط صفحة إنستغرام/فيسبوك كاملاً):</label><input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000 أو https://instagram.com/..." required>
+                    <label>رقم واتساب أو رابط إنستغرام:</label><input type="text" name="admin_whatsapp" value="{{ controls.admin_whatsapp }}" placeholder="مثال: 962790000000" required>
                     <button type="submit">حفظ وجهة التواصل</button>
                 </form>
             </div>
@@ -1122,9 +1145,9 @@ admin_template = """
                 <form action="/admin-add-auction" method="POST" enctype="multipart/form-data">
                     <label>عنوان المزاد (اسم القطعة):</label><input type="text" name="title" placeholder="مثال: ساعة فاخرة نادرة" required>
                     <label>وصف المزاد أو تفاصيله:</label><textarea name="description" rows="3" placeholder="تفاصيل وحالة القطعة..."></textarea>
-                    <label>السعر الابتدائي:</label><input type="text" name="current_price" placeholder="مثال: 50 دينار" required>
-                    <label>الحد الأدنى للزيادة:</label><input type="text" name="min_bid" placeholder="مثال: 5 دينار" required>
-                    <label>الحد الأقصى للشراء الفوري (اختياري):</label><input type="text" name="max_price" placeholder="مثال: 150 دينار">
+                    <label>السعر الابتدائي (أدخل الرقم فقط - يتم إضافة {{ controls.currency_symbol }} تلقائياً):</label><input type="text" name="current_price" placeholder="مثال: 50" required>
+                    <label>الحد الأدنى للزيادة:</label><input type="text" name="min_bid" placeholder="مثال: 5" required>
+                    <label>الحد الأقصى للشراء الفوري (اختياري):</label><input type="text" name="max_price" placeholder="مثال: 150">
                     <label>مدة المزاد بالساعات:</label><input type="number" name="duration_hours" value="48" required>
                     <label>صور القطعة للمزاد 📸:</label><input type="file" name="auction_images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
                     <button type="submit" style="background: #d97706; margin-top: 10px;">إطلاق المزاد 🚀</button>
@@ -1184,7 +1207,7 @@ admin_template = """
                 <h3>➕ إضافة منتج جديد</h3>
                 <form action="/admin-add-product" method="POST" enctype="multipart/form-data">
                     <label>{{ config.texts.label_title }}</label><input type="text" name="title" required>
-                    <label>{{ config.texts.label_price }}</label><input type="text" name="price">
+                    <label>{{ config.texts.label_price }} (أدخل الرقم فقط - يتم إضافة {{ controls.currency_symbol }} تلقائياً)</label><input type="text" name="price">
                     <label>{{ config.texts.label_quantity }}</label><input type="text" name="quantity" value="1">
                     <label>{{ config.texts.label_description }}</label><textarea name="description" rows="3"></textarea>
                     <label>{{ config.texts.upload_text }}</label><input type="file" name="images" multiple accept="image/*" style="color: #fff; margin-bottom: 10px;">
@@ -1310,20 +1333,21 @@ def place_bid(a_id):
         return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error="❌ خطأ: رقم الهاتف يجب أن يتكون من أرقام فقط وألا يقل عن 7 أرقام!")
     if not bid_amount_str.isdigit():
         return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error="❌ خطأ: السعر المقترح للمزايدة يجب أن يكون أرقاماً فقط بدون أحرف!")
-    bid_amount = int(bid_amount_str)
+    bid_raw = int(bid_amount_str)
+    formatted_bid_amount = format_price(str(bid_raw))
     if auction.get('max_price'):
         try:
             max_val = int(re.sub(r'[^0-9]', '', str(auction['max_price'])))
-            if bid_amount > max_val:
+            if bid_raw > max_val:
                 return render_template_string(auction_detail_template, auction=auction, config=site_config, controls=site_controls, vis=text_visibility, error=f"❌ خطأ: عذراً، لا يمكنك تقديم مزايدة أكبر من الحد الأقصى ({auction['max_price']})!")
         except Exception: pass
-    if bid_amount and bidder_name:
+    if bid_raw and bidder_name:
         if 'bids' not in auction: auction['bids'] = []
-        auction['bids'].append({"name": bidder_name, "phone": bidder_phone, "amount": bid_amount})
-        auction['bids'] = sorted(auction['bids'], key=lambda x: x['amount'], reverse=True)
+        auction['bids'].append({"name": bidder_name, "phone": bidder_phone, "amount": formatted_bid_amount, "raw_amount": bid_raw})
+        auction['bids'] = sorted(auction['bids'], key=lambda x: x['raw_amount'], reverse=True)
         top_bid = auction['bids'][0]
         auction['current_price'] = f"{top_bid['amount']} (بواسطة: {top_bid['name']})"
-        msg = f"مرحباً سامر، لدي مزايدة جديدة\nعلى القطعة: {auction['title']}\nقيمة المزايدة: {bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
+        msg = f"مرحباً سامر، لدي مزايدة جديدة\nعلى القطعة: {auction['title']}\nقيمة المزايدة: {formatted_bid_amount}\nاسم المزايد: {bidder_name}\nرقم الهاتف: {bidder_phone}"
         encoded_msg = urllib.parse.quote(msg)
         target_setting = site_controls.get('admin_whatsapp', '962790000000')
         final_url = get_destination_url(target_setting, encoded_msg)
@@ -1356,6 +1380,13 @@ def update_admin_whatsapp():
     if whatsapp: site_controls['admin_whatsapp'] = whatsapp
     return redirect(url_for('admin'))
 
+@app.route('/update-currency', methods=['POST'])
+def update_currency():
+    global site_controls
+    curr = request.form.get('currency_symbol', '').strip()
+    if curr: site_controls['currency_symbol'] = curr
+    return redirect(url_for('admin'))
+
 @app.route('/update-cod-settings', methods=['POST'])
 def update_cod_settings():
     global site_controls
@@ -1385,11 +1416,16 @@ def admin_add_auction():
     global auction_id_counter, auctions
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
-    current_price = request.form.get('current_price', '').strip()
-    min_bid = request.form.get('min_bid', '').strip()
-    max_price = request.form.get('max_price', '').strip()
+    raw_price = request.form.get('current_price', '').strip()
+    raw_min = request.form.get('min_bid', '').strip()
+    raw_max = request.form.get('max_price', '').strip()
     duration_hours = int(request.form.get('duration_hours', 48))
     end_time = datetime.now() + timedelta(hours=duration_hours)
+    
+    current_price = format_price(raw_price)
+    min_bid = format_price(raw_min)
+    max_price = format_price(raw_max) if raw_max else ""
+    
     images_list = [process_and_compress_image(f) for f in request.files.getlist('auction_images') if f and f.filename != '']
     if title and current_price:
         auctions.insert(0, {"id": auction_id_counter, "title": title, "description": description, "current_price": current_price, "min_bid": min_bid, "max_price": max_price, "end_time": end_time.isoformat(), "images": [img for img in images_list if img], "bids": []})
@@ -1467,12 +1503,13 @@ def add_product():
     global product_id_counter
     if site_controls['block_posting']: return redirect(url_for('index'))
     title = request.form.get('title')
-    price = request.form.get('price', '')
+    raw_price = request.form.get('price', '')
+    price = format_price(raw_price)
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     numeric_price = 0.0
-    try: numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
+    try: numeric_price = float(re.sub(r'[^0-9.]', '', str(raw_price)))
     except Exception: pass
     if title:
         products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False, "views": 0})
@@ -1483,12 +1520,13 @@ def add_product():
 def admin_add_product():
     global product_id_counter
     title = request.form.get('title')
-    price = request.form.get('price', '')
+    raw_price = request.form.get('price', '')
+    price = format_price(raw_price)
     quantity = request.form.get('quantity', '1').strip()
     description = request.form.get('description', '').strip()
     images_list = [process_and_compress_image(f) for f in request.files.getlist('images') if f and f.filename != '']
     numeric_price = 0.0
-    try: numeric_price = float(re.sub(r'[^0-9.]', '', str(price)))
+    try: numeric_price = float(re.sub(r'[^0-9.]', '', str(raw_price)))
     except Exception: pass
     if title:
         products.insert(0, {"id": product_id_counter, "title": title, "price": price, "numeric_price": numeric_price, "quantity": quantity, "description": description, "contact_type": "phone", "contact_value": "", "images": [img for img in images_list if img], "is_sold": False, "views": 0})
