@@ -258,7 +258,6 @@ def format_price(raw_price):
         return ""
     clean_val = str(raw_price).strip()
     curr = site_controls.get("currency_symbol", "د.أ")
-    # إذا كان المدخل يحتوي مسبقاً على العملة أو نص، نتركه أو نضيفه إذا كان رقماً بحتاً
     if curr in clean_val:
         return clean_val
     numbers_only = re.sub(r'[^0-9.]', '', clean_val)
@@ -618,7 +617,7 @@ default_html_template = """
                     <div class="product-images">{% for img in p.images %}<img src="{{ img }}" alt="صورة">{% endfor %}</div>
                     <div class="product-info">
                         <div class="product-title" title="{{ p.title }}">{{ p.title }}</div>
-                        <div class="product-price">{{ p.price }} {% if p.quantity %} | الكمية: {{ p.quantity }}{% endif %}</div>
+                        <div class="product-price">{{ p.price }}</div>
                         <div class="card-buttons">
                             {% if vis.view_details %}
                                 <div class="contact-btn-wrapper">
