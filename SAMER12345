@@ -102,7 +102,7 @@ site_controls = {
     "logo_image": "",
     "logo_size": "130px",
     "enable_logo_pulse": True,
-    "logo_pulse_speed": "4s",
+    "logo_pulse_speed": "3s",
     "logo_pulse_color": "#d97706",
     "admin_whatsapp": "962790000000",
     "social_links": [
@@ -293,7 +293,7 @@ product_detail_template = """
     <div id="toast" class="toast-msg">✅ تم نسخ رابط المنتج</div>
     <div class="detail-container">
         <h1 class="product-title">{{ product.title }}</h1>
-        <div class="product-price">{{ product.price }} {% if product.quantity %} | الكمية: {{ product.quantity }}{% endif %}</div>
+        <div class="product-price">{{ product.price }}</div>
         {% if product.description %}
         <div class="product-desc">
             <b style="color: {{ config.colors.title }}; display: block; margin-bottom: 8px; text-align: right;">قصة القطعة:</b>
@@ -440,13 +440,26 @@ default_html_template = """
         .header { text-align: center; margin-bottom: 25px; }
         .glass-title { background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; display: inline-block; padding: 12px 25px; border-radius: 14px; color: {{ config.colors.title }}; font-size: 28px; font-weight: bold; margin: 0; }
         
-        @keyframes customPulse {
-            0% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 15px {{ controls.logo_pulse_color }}; }
-            50% { transform: scale(1.02); filter: brightness(1.15); box-shadow: 0 0 30px {{ controls.logo_pulse_color }}; }
-            100% { transform: scale(1); filter: brightness(1); box-shadow: 0 0 15px {{ controls.logo_pulse_color }}; }
+        @keyframes rotatingGlow {
+            0% { 
+                box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 
+                            10px 0 25px rgba(217, 119, 6, 0.4); 
+            }
+            33% { 
+                box-shadow: 0 0 20px {{ controls.logo_pulse_color }}, 
+                            0 10px 25px rgba(217, 119, 6, 0.4); 
+            }
+            66% { 
+                box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 
+                            -10px 0 25px rgba(217, 119, 6, 0.4); 
+            }
+            100% { 
+                box-shadow: 0 0 15px {{ controls.logo_pulse_color }}, 
+                            10px 0 25px rgba(217, 119, 6, 0.4); 
+            }
         }
 
-        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 50%; padding: 5px; width: {{ controls.logo_size }}; height: {{ controls.logo_size }}; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: customPulse {{ controls.logo_pulse_speed }} infinite ease-in-out;{% endif %} }
+        .logo-img-container { display: inline-block; background: {{ config.colors.logo_bg }}; border: 2px solid {{ config.colors.logo_border }}; border-radius: 50%; padding: 5px; width: {{ controls.logo_size }}; height: {{ controls.logo_size }}; overflow: hidden; box-sizing: border-box; {% if controls.enable_logo_pulse %}animation: rotatingGlow {{ controls.logo_pulse_speed }} infinite linear;{% endif %} }
         .logo-img-container img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; display: block; }
         .header p { color: {{ config.colors.subtitle }}; font-size: 13px; margin: 10px 0 0 0; }
         
@@ -1124,17 +1137,17 @@ admin_template = """
                         <option value="210px" {% if controls.logo_size == '210px' %}selected{% endif %}>كبير جداً (210 بكسل)</option>
                     </select>
                     <hr style="border: 0; border-top: 1px solid #333; margin: 15px 0;">
-                    <label class="checkbox-label"><input type="checkbox" name="enable_logo_pulse" {% if controls.enable_logo_pulse %}checked{% endif %}> تشغيل حركة النبض والتوهج المتحرك للصورة ✨</label>
-                    <label>سرعة النبض (بالثواني):</label>
+                    <label class="checkbox-label"><input type="checkbox" name="enable_logo_pulse" {% if controls.enable_logo_pulse %}checked{% endif %}> تشغيل حركة الالتفاف والدوران للإضاءة الدائرية ✨</label>
+                    <label>سرعة الدوران والنبض (بالثواني):</label>
                     <select name="logo_pulse_speed" style="background:#000; color:#fff; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px; width:100%;">
-                        <option value="6s" {% if controls.logo_pulse_speed == '6s' %}selected{% endif %}>بطيء جداً (6 ثواني)</option>
-                        <option value="4s" {% if controls.logo_pulse_speed == '4s' %}selected{% endif %}>متوسط (4 ثواني)</option>
-                        <option value="2s" {% if controls.logo_pulse_speed == '2s' %}selected{% endif %}>سريع (ثانيتان)</option>
+                        <option value="5s" {% if controls.logo_pulse_speed == '5s' %}selected{% endif %}>بطيء (5 ثواني)</option>
+                        <option value="3s" {% if controls.logo_pulse_speed == '3s' %}selected{% endif %}>متوسط (3 ثواني - موصى به)</option>
+                        <option value="1.5s" {% if controls.logo_pulse_speed == '1.5s' %}selected{% endif %}>سريع (ثانية ونصف)</option>
                     </select>
                     <label>لون التوهج والإضاءة:</label>
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                         <input type="color" name="logo_pulse_color" value="{{ controls.logo_pulse_color }}">
-                        <span style="font-size: 12px; color: #aaa;">اختر لون التوهج</span>
+                        <span style="font-size: 12px; color: #aaa;">اختر لون التوهج المتحرك</span>
                     </div>
                     <button type="submit" style="background: #25d366; margin-top: 10px;">حفظ إعدادات الشعار ✅</button>
                 </form>
@@ -1634,4 +1647,4 @@ def admin():
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(format(0, '0'), port=port)
