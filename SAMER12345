@@ -99,7 +99,7 @@ site_controls = {
     "cod_note_text": "الدفع عند الاستلام 💵",
     "use_logo_image": False,
     "logo_image": "",
-    "logo_size": "130px",  # حجم الشعار الافتراضي
+    "logo_size": "130px",
     "enable_logo_pulse": True,
     "logo_pulse_speed": "4s",
     "logo_pulse_color": "#d97706",
@@ -113,7 +113,7 @@ site_controls = {
 
 text_visibility = {
     "settings_btn_text": True,
-    "subtitle": True,  # إمكانية تفعيل/إطفاء جملة لكل قطعة حكاية
+    "subtitle": True,
     "heading_products": True,
     "no_products": True,
     "heading_auctions": True,
@@ -153,7 +153,7 @@ site_config = {
     "bg_image": "",
     "texts": {
         "settings_btn_text": "⚙️ الإعدادات ▼",
-        "subtitle": "لكل قطعة حكاية",  # النص القابل للتعديل
+        "subtitle": "لكل قطعة حكاية",
         "heading_products": "المنتجات المعروضه",
         "no_products": "لا توجد منتجات معروضة حالياً.",
         "heading_auctions": "🔥 المزادات الحالية المشتعلة",
@@ -1572,7 +1572,7 @@ def admin():
             authorized = True
             login_attempts = 0
         else:
-            error = True
+            error = type('obj', (object,), {'__bool__': lambda self: True})()
             login_attempts += 1
             if login_attempts >= 5:
                 lockout_until = current_time + 900
