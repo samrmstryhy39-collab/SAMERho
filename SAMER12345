@@ -95,7 +95,7 @@ site_controls = {
     "enable_forgot_pass": True,
     "enable_scroll_top": True,
     "enable_marquee": True,
-    "enable_bg_overlay": True,        # خيار تفعيل أو إيقاف عتمة الخلفية
+    "enable_bg_overlay": True,        
     "currency_symbol": "د.أ",
     "marquee_text": "🔥 أهلاً بكم في متجر عتيق - كل قطعة أصلية ولها حكاية فريدة 🏛️ | توصيل سريع لجميع المحافظات 🚚",
     "cod_note_text": "الدفع عند الاستلام 💵",
@@ -721,14 +721,68 @@ default_html_template = """
     </footer>
     {% endif %}
     <script>
+        // حفظ واسترجاع موضع التمرير تلقائياً عند تصفح المنتجات والعودة
+        window.addEventListener('beforeunload', function() {
+            sessionStorage.setItem('scrollPosition', window.scrollY);
+        });
+
+        window.addEventListener('load', function() {
+            const savedPosition = sessionStorage.getItem('scrollPosition');
+            if (savedPosition !== null) {
+                window.scrollTo(0, parseInt(savedPosition));
+                sessionStorage.removeItem('scrollPosition');
+            }
+        });
+
         const scrollBtn = document.getElementById('scrollTopBtn');
+        let isAutoScrolling = false;
+
         window.addEventListener('scroll', () => {
             if (scrollBtn) {
                 if (window.scrollY > 300) { scrollBtn.style.display = 'flex'; }
                 else { scrollBtn.style.display = 'none'; }
             }
         });
-        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+        // إيقاف الصعود التلقائي فوراً عند أي تفاعل أو نقر من المستخدم
+        ['wheel', 'touchstart', 'mousedown', 'keydown'].forEach(eventType => {
+            window.addEventListener(eventType, () => {
+                if (isAutoScrolling) {
+                    isAutoScrolling = false;
+                }
+            }, { passive: true });
+        });
+
+        function scrollToTop() {
+            isAutoScrolling = true;
+            const targetPosition = 0;
+            const startPosition = window.pageYOffset;
+            const distance = targetPosition - startPosition;
+            const duration = 800; // مدة الصعود بالمللي ثانية
+            let startTime = null;
+
+            function animation(currentTime) {
+                if (!startTime) startTime = currentTime;
+                const timeElapsed = currentTime - startTime;
+                const run = ease(timeElapsed, startPosition, distance, duration);
+                window.scrollTo(0, run);
+
+                if (isAutoScrolling && timeElapsed < duration && window.pageYOffset > 0) {
+                    requestAnimationFrame(animation);
+                } else {
+                    isAutoScrolling = false;
+                }
+            }
+
+            function ease(t, b, c, d) {
+                t /= d / 2;
+                if (t < 1) return c / 2 * t * t + b;
+                t--;
+                return -c / 2 * (t * (t - 2) - 1) + b;
+            }
+
+            requestAnimationFrame(animation);
+        }
 
         function quickShareProduct(title, price, path) {
             event.stopPropagation();
@@ -1154,7 +1208,8 @@ admin_template = """
                     <label>حجم الشعار الدائري:</label>
                     <select name="logo_size" style="background:#000; color:#fff; padding:10px; border-radius:8px; border:1px solid #333; margin-bottom:10px; width:100%;">
                         <option value="90px" {% if controls.logo_size == '90px' %}selected{% endif %}>صغير (90 بكسل)</option>
-                        <option value="130px" {% if controls.logo_size == '130px' %}selected{% endif %}>وسط (130 بكسل - موصى به)</option>
+                        <option value="110px" {% if controls.logo_size == '110px' %}selected{% endif %}>وسط (110 بكسل)</option>
+                        <option value="130px" {% if controls.logo_size == '130px' %}selected{% endif %}>متوسط (130 بكسل - موصى به)</option>
                         <option value="170px" {% if controls.logo_size == '170px' %}selected{% endif %}>كبير (170 بكسل)</option>
                         <option value="210px" {% if controls.logo_size == '210px' %}selected{% endif %}>كبير جداً (210 بكسل)</option>
                     </select>
